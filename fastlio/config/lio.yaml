@@ -1,0 +1,35 @@
+rosbag: /Users/linhao/Traj-LO/data/voyah_bag/voyahGT.bag
+imu_topic: /RS/imu
+lidar_topic: /RS/lidar
+body_frame: body
+world_frame: lidar
+print_time_cost: true
+
+lidar_filter_num: 1
+lidar_min_range: 0.4
+lidar_max_range: 250.0
+scan_resolution: 0.15
+map_resolution: 0.3
+
+cube_len: 300
+det_range: 360
+move_thresh: 1.5
+
+na: 0.01
+ng: 0.01
+nba: 0.0001
+nbg: 0.0001
+
+imu_init_num: 20
+near_search_num: 5
+ieskf_max_iter: 5
+
+gravity_align: false
+esti_il: false
+
+r_il: [0.00102622 , 0.99981338 , 0.01929129 ,
+      -0.99999365 , 0.00109185 ,-0.00339156 ,
+      -0.00341199 ,-0.01928769 , 0.99980815]
+      
+t_il: [1.03  ,   0.    ,   2.066807]
+lidar_cov_inv: 1000.0
