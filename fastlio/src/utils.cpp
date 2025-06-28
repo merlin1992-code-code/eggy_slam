@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:44:02
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-06-27 16:03:15
+ * @LastEditTime: 2025-06-28 12:15:45
  */
 #include "utils.h"
 
@@ -48,8 +48,8 @@ pcl::PointCloud<pcl::PointXYZINormal>::Ptr Utils::convertToPCL(const sensor_msgs
         double ts = sensor_msgs::readPointCloud2BufferValue<double>(
             &pc_msg->data[j * step + ts_offset],
             pc_msg->fields[ts_idx].datatype);
+            
         // 过滤无效点
-
         if (std::isnan(x) || std::isnan(y) || std::isnan(z))
         {
             num_invalid_pt += 1;
@@ -63,7 +63,6 @@ pcl::PointCloud<pcl::PointXYZINormal>::Ptr Utils::convertToPCL(const sensor_msgs
             num_out_of_range_pt += 1;
             continue;
         }
-
 
         int64_t ts_ns = static_cast<int64_t>(ts * 1e9);
         int64_t offset_time_ns = ts_ns - ts_begin_ns;
