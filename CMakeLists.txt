@@ -12,25 +12,35 @@ if(NOT CXX_MARCH)
     set(CXX_MARCH native)
 endif()
 
+
 find_package(PCL REQUIRED)
+find_package(PROJ REQUIRED)
 add_subdirectory(thirdparty)
 add_definitions("-D SOPHUS_USE_BASIC_LOGGING")
 
 include_directories(thirdparty/Sophus
     ${PCL_INCLUDE_DIRS})
 
-set(SRC_LIST
-    fastlio/src/map_builder/commons.cpp
-    fastlio/src/map_builder/ieskf.cpp
-    fastlio/src/map_builder/imu_processor.cpp
-    fastlio/src/map_builder/ikd_Tree.cpp
-    fastlio/src/map_builder/lidar_processor.cpp
-    fastlio/src/map_builder/map_builder.cpp
-    fastlio/src/utils.cpp
-    fastlio/src/lio_node.cpp
+#fastlio
+set(LIO_SRC_LIST
+    fastlio/map_builder/commons.cpp
+    fastlio/map_builder/ieskf.cpp
+    fastlio/map_builder/imu_processor.cpp
+    fastlio/map_builder/ikd_Tree.cpp
+    fastlio/map_builder/lidar_processor.cpp
+    fastlio/map_builder/map_builder.cpp
+    fastlio/utils.cpp
+    fastlio/lio_node.cpp
 )
 
-add_executable(eggy main.cpp ${SRC_LIST})
+#m-detector
+set(M_DETECTOR_SRC
+    m-detector/DynObjCluster.cpp
+    m-detector/DynObjFilter.cpp
+    m-detector/dyr_node.cpp
+)
+
+add_executable(eggy main.cpp ${LIO_SRC_LIST} ${M_DETECTOR_SRC})
 
 target_compile_definitions(eggy PUBLIC SOPHUS_USE_BASIC_LOGGING)
 
@@ -45,4 +55,5 @@ target_link_libraries(eggy PUBLIC
     glm::glm
     tsl::robin_map
     TBB::tbb
+    PROJ::PROJ
 )

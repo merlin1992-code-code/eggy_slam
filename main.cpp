@@ -3,10 +3,10 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 20:43:56
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-06-28 20:47:36
+ * @LastEditTime: 2025-06-28 21:15:26
  */
 #include <iostream>
-#include "fastlio/src/lio_node.h"
+#include "fastlio/lio_node.h"
 int main(int argc, char **argv)
 {
     if (argc < 2)

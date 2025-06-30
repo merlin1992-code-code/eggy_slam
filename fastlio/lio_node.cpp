@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-06-28 20:49:31
+ * @LastEditTime: 2025-06-28 20:51:54
  */
 
 #include "lio_node.h"
@@ -188,22 +188,3 @@ void LIONode::execute()
         }
     }
 }
-
-// int main(int argc, char **argv)
-// {
-//     if (argc < 2)
-//     {
-//         std::cerr << "用法: " << argv[0] << " config.yaml" << std::endl;
-//         return 1;
-//     }
-//     if (!fs::exists(argv[1]))
-//     {
-//         std::cerr << "配置文件不存在: " << argv[1] << std::endl;
-//         return 1;
-//     }
-
-//     auto lio_node = std::make_shared<LIONode>(argv[1]);
-//     lio_node->execute();
-
-//     return 0;
-// }
