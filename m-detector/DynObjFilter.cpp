@@ -272,58 +272,67 @@ void DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort,
   points.resize(size);
   point_soph *p = point_soph_pointers[cur_point_soph_pointers];
   if (time_file != "")
-    time_out << size << " "; // rec computation time
+    time_out << size << " ";
+  // rec computation time
   // std::for_each(
   //     std::execution::par, index.begin(), index.end(), [&](const int &i)
   //     {
-  BOOST_FOREACH (int i, index)
-  {
+  // BOOST_FOREACH (int i, index)
+  // {
+  tbb::parallel_for(
+      tbb::blocked_range<size_t>(0, index.size()),
+      [&](const tbb::blocked_range<size_t> &r)
+      {
+        for (size_t idx = r.begin(); idx != r.end(); ++idx)
+        {
+          int i = index[idx];
+          p[i].reset();
+          V3D p_body(feats_undistort->points[i].x, feats_undistort->points[i].y,
+                     feats_undistort->points[i].z);
+          int intensity = feats_undistort->points[i].curvature;
+          V3D p_glob(rot_end * (p_body) + pos_end);
+          p[i].glob = p_glob;
+          p[i].dyn = STATIC;
+          p[i].rot = rot_end.transpose();
+          p[i].transl = pos_end;
+          p[i].time = scan_end_time;
+          p[i].local = p_body;
+          p[i].intensity = feats_undistort->points[i].intensity;
+          p[i].point = feats_undistort->points[i];
+          if (InvalidPointCheck(p_body, intensity))
+          {
+            p[i].dyn = INVALID;
+            dyn_tag_origin[i] = 0;
+            dyn_tag_cluster[i] = -1;
+          }
+          else if (SelfPointCheck(p_body, p[i].dyn))
+          {
+            p[i].dyn = INVALID;
+            dyn_tag_origin[i] = 0;
+          }
+          else if (Case1(p[i]))
+          {
+            p[i].dyn = CASE1;
+            dyn_tag_origin[i] = 1;
+          }
+          else if (Case2(p[i]))
+          {
+            p[i].dyn = CASE2;
+            dyn_tag_origin[i] = 1;
+          }
+          else if (Case3(p[i]))
+          {
+            p[i].dyn = CASE3;
+            dyn_tag_origin[i] = 1;
+          }
+          else
+          {
+            dyn_tag_origin[i] = 0;
+          }
+          points[i] = &p[i];
+        }
+      });
 
-    p[i].reset();
-    V3D p_body(feats_undistort->points[i].x, feats_undistort->points[i].y,
-               feats_undistort->points[i].z);
-    int intensity = feats_undistort->points[i].curvature;
-    V3D p_glob(rot_end * (p_body) + pos_end);
-    p[i].glob = p_glob;
-    p[i].dyn = STATIC;
-    p[i].rot = rot_end.transpose();
-    p[i].transl = pos_end;
-    p[i].time = scan_end_time;
-    p[i].local = p_body;
-    p[i].intensity = feats_undistort->points[i].intensity;
-    p[i].point = feats_undistort->points[i];
-    if (InvalidPointCheck(p_body, intensity))
-    {
-      p[i].dyn = INVALID;
-      dyn_tag_origin[i] = 0;
-      dyn_tag_cluster[i] = -1;
-    }
-    else if (SelfPointCheck(p_body, p[i].dyn))
-    {
-      p[i].dyn = INVALID;
-      dyn_tag_origin[i] = 0;
-    }
-    else if (Case1(p[i]))
-    {
-      p[i].dyn = CASE1;
-      dyn_tag_origin[i] = 1;
-    }
-    else if (Case2(p[i]))
-    {
-      p[i].dyn = CASE2;
-      dyn_tag_origin[i] = 1;
-    }
-    else if (Case3(p[i]))
-    {
-      p[i].dyn = CASE3;
-      dyn_tag_origin[i] = 1;
-    }
-    else
-    {
-      dyn_tag_origin[i] = 0;
-    }
-    points[i] = &p[i];
-  }
   if (time_file != "")
     time_out << omp_get_wtime() - t0 << " "; // rec computation time
   for (int i = 0; i < size; i++)
@@ -605,10 +614,20 @@ void DynObjFilter::Points2Buffer(vector<point_soph *> &points,
   // std::for_each(
   //     std::execution::par, index_vector.begin(), index_vector.end(),
   //     [&](const int &i) { buffer.push_parallel(points[i], cur_tail + i); });
-  BOOST_FOREACH (int i, index_vector)
-  {
-    buffer.push_parallel(points[i], cur_tail + i);
-  }
+  // BOOST_FOREACH (int i, index_vector)
+  // {
+  //   buffer.push_parallel(points[i], cur_tail + i);
+  // }
+  tbb::parallel_for(
+      tbb::blocked_range<size_t>(0, index_vector.size()),
+      [&](const tbb::blocked_range<size_t> &r)
+      {
+        for (size_t idx = r.begin(); idx != r.end(); ++idx)
+        {
+          int i = index_vector[idx];
+          buffer.push_parallel(points[i], cur_tail + i);
+        }
+      });
 }
 
 void DynObjFilter::Buffer2DepthMap(double cur_time)
@@ -2137,7 +2156,6 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
   ensure_out_dir(std_cluster_down_dir);
   ensure_out_dir(std_cluster_pub_dir);
   ensure_out_dir(std_cluster_dir);
-  
 
   if (cluster_coupled) // pubLaserCloudEffect pub_pcl_dyn_extend
                        // pubLaserCloudEffect_depth
@@ -2224,9 +2242,9 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
         *laserCloudSteadObj_pub += *laserCloudSteadObj_accu[i];
       }
     }
-    if (!laserCloudSteadObj_pub->empty())  // /m_detector/std_points
+    if (!laserCloudSteadObj_pub->empty()) // /m_detector/std_points
       pcl::io::savePCDFileBinary(std_cluster_pub_dir + "/" + file_name,
-                                *laserCloudSteadObj_pub);
+                                 *laserCloudSteadObj_pub);
   }
   if (!laserCloudSteadObj_clus->empty()) // /m_detector/std_points
     pcl::io::savePCDFileBinary(std_cluster_dir + "/" + file_name,

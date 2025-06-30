@@ -8,6 +8,10 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <boost/shared_ptr.hpp>
+
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+
 #include "types.h"
 #define HASH_length     10000
 class VOXEL {

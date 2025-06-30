@@ -225,76 +225,86 @@ void DynObjCluster::PubClusterResult_voxel(
   // std::for_each(
   //     std::execution::par, index_bbox.begin(), index_bbox.end(),
   //     [&](const int &bbox_i) {
-  BOOST_FOREACH (int bbox_i, index_bbox)
-  {
-    PointType center;
-    float x_size = bbox.Center[bbox_i].pose.covariance[3 * 6 + 3];
-    float y_size = bbox.Center[bbox_i].pose.covariance[4 * 6 + 4];
-    float z_size = bbox.Center[bbox_i].pose.covariance[5 * 6 + 5];
-    center.x = bbox.Center[bbox_i].pose.pose.position.x;
-    center.y = bbox.Center[bbox_i].pose.pose.position.y;
-    center.z = bbox.Center[bbox_i].pose.pose.position.z;
-    PointType max;
-    max.x = bbox.Center[bbox_i].pose.covariance[2 * 6 + 3];
-    max.y = bbox.Center[bbox_i].pose.covariance[3 * 6 + 4];
-    max.z = bbox.Center[bbox_i].pose.covariance[4 * 6 + 5];
-    PointType min;
-    min.x = bbox.Center[bbox_i].pose.covariance[3 * 6 + 2];
-    min.y = bbox.Center[bbox_i].pose.covariance[4 * 6 + 3];
-    min.z = bbox.Center[bbox_i].pose.covariance[5 * 6 + 4];
-    int n_x = std::max(1.0f, 1.0f * x_size) / Voxel_revolusion;
-    int n_y = std::max(1.0f, 1.0f * y_size) / Voxel_revolusion;
-    int n_z = std::max(1.0f, 1.0f * z_size) / Voxel_revolusion;
-    int voxel_center =
-        floor((center.x - xyz_origin(0)) / Voxel_revolusion) *
-            GridMapedgesize_xy * GridMapedgesize_z +
-        floor((center.y - xyz_origin(1)) / Voxel_revolusion) *
-            GridMapedgesize_z +
-        floor((center.z - xyz_origin(2)) / Voxel_revolusion);
-    int ii = 0;
-    Eigen::Vector3f xyz;
-    for (int i = 0; i <= 2 * n_x + 1; i++)
-    {
-      ii += (i % 2 ? 1 : -1) * i;
-      int jj = 0;
-      for (int j = 0; j <= 2 * n_y + 1; j++)
+  //
+  // BOOST_FOREACH (int bbox_i, index_bbox)
+  // {
+  tbb::parallel_for(
+      tbb::blocked_range<size_t>(0, index_bbox.size()),
+      [&](const tbb::blocked_range<size_t> &r)
       {
-        jj += (j % 2 ? 1 : -1) * j;
-        int kk = 0;
-        for (int k = 0; k <= 2 * n_z + 1; k++)
+        for (size_t bbox_i = r.begin(); bbox_i != r.end(); ++bbox_i)
         {
-          kk += (k % 2 ? 1 : -1) * k;
-          int voxel = voxel_center +
-                      ii * GridMapedgesize_xy * GridMapedgesize_z +
-                      jj * GridMapedgesize_z + kk;
-          if (voxel < 0 || voxel > GridMapsize)
-            continue;
-          XYZExtract(voxel, xyz);
-          Eigen::Vector3f voxel_loc(xyz(0) + 0.5f * Voxel_revolusion,
-                                    xyz(1) + 0.5f * Voxel_revolusion,
-                                    xyz(2) + 0.5f * Voxel_revolusion);
-          if (umap[voxel].points_num == 0 &&
-              !((voxel_loc(0) > min.x && voxel_loc(0) < max.x) &&
-                (voxel_loc(1) > min.y && voxel_loc(1) < max.y) &&
-                (voxel_loc(2) > min.z && voxel_loc(2) < max.z)))
+          PointType center;
+          float x_size = bbox.Center[bbox_i].pose.covariance[3 * 6 + 3];
+          float y_size = bbox.Center[bbox_i].pose.covariance[4 * 6 + 4];
+          float z_size = bbox.Center[bbox_i].pose.covariance[5 * 6 + 5];
+          center.x = bbox.Center[bbox_i].pose.pose.position.x;
+          center.y = bbox.Center[bbox_i].pose.pose.position.y;
+          center.z = bbox.Center[bbox_i].pose.pose.position.z;
+          PointType max;
+          max.x = bbox.Center[bbox_i].pose.covariance[2 * 6 + 3];
+          max.y = bbox.Center[bbox_i].pose.covariance[3 * 6 + 4];
+          max.z = bbox.Center[bbox_i].pose.covariance[4 * 6 + 5];
+          PointType min;
+          min.x = bbox.Center[bbox_i].pose.covariance[3 * 6 + 2];
+          min.y = bbox.Center[bbox_i].pose.covariance[4 * 6 + 3];
+          min.z = bbox.Center[bbox_i].pose.covariance[5 * 6 + 4];
+          int n_x = std::max(1.0f, 1.0f * x_size) / Voxel_revolusion;
+          int n_y = std::max(1.0f, 1.0f * y_size) / Voxel_revolusion;
+          int n_z = std::max(1.0f, 1.0f * z_size) / Voxel_revolusion;
+          int voxel_center =
+              floor((center.x - xyz_origin(0)) / Voxel_revolusion) *
+                  GridMapedgesize_xy * GridMapedgesize_z +
+              floor((center.y - xyz_origin(1)) / Voxel_revolusion) *
+                  GridMapedgesize_z +
+              floor((center.z - xyz_origin(2)) / Voxel_revolusion);
+          int ii = 0;
+          Eigen::Vector3f xyz;
+          for (int i = 0; i <= 2 * n_x + 1; i++)
           {
-            umap_ground[voxel].bbox_index = bbox_i;
-            used_map_set_vec[bbox_i].insert(voxel);
-            bbox.Ground_voxels_set[bbox_i].emplace(voxel);
-            bbox.Ground_voxels_vec[bbox_i].push_back(voxel);
-          }
-          else if (umap[voxel].points_num == 0 &&
-                   (voxel_loc(0) > min.x && voxel_loc(0) < max.x) &&
-                   (voxel_loc(1) > min.y && voxel_loc(1) < max.y) &&
-                   (voxel_loc(2) > min.z && voxel_loc(2) < max.z))
-          {
-            umap_insidebox[voxel].bbox_index = bbox_i;
-            used_map_set_vec[bbox_i].insert(voxel);
+            ii += (i % 2 ? 1 : -1) * i;
+            int jj = 0;
+            for (int j = 0; j <= 2 * n_y + 1; j++)
+            {
+              jj += (j % 2 ? 1 : -1) * j;
+              int kk = 0;
+              for (int k = 0; k <= 2 * n_z + 1; k++)
+              {
+                kk += (k % 2 ? 1 : -1) * k;
+                int voxel = voxel_center +
+                            ii * GridMapedgesize_xy * GridMapedgesize_z +
+                            jj * GridMapedgesize_z + kk;
+                if (voxel < 0 || voxel > GridMapsize)
+                  continue;
+                XYZExtract(voxel, xyz);
+                Eigen::Vector3f voxel_loc(xyz(0) + 0.5f * Voxel_revolusion,
+                                          xyz(1) + 0.5f * Voxel_revolusion,
+                                          xyz(2) + 0.5f * Voxel_revolusion);
+                if (umap[voxel].points_num == 0 &&
+                    !((voxel_loc(0) > min.x && voxel_loc(0) < max.x) &&
+                      (voxel_loc(1) > min.y && voxel_loc(1) < max.y) &&
+                      (voxel_loc(2) > min.z && voxel_loc(2) < max.z)))
+                {
+                  umap_ground[voxel].bbox_index = bbox_i;
+                  used_map_set_vec[bbox_i].insert(voxel);
+                  bbox.Ground_voxels_set[bbox_i].emplace(voxel);
+                  bbox.Ground_voxels_vec[bbox_i].push_back(voxel);
+                }
+                else if (umap[voxel].points_num == 0 &&
+                         (voxel_loc(0) > min.x && voxel_loc(0) < max.x) &&
+                         (voxel_loc(1) > min.y && voxel_loc(1) < max.y) &&
+                         (voxel_loc(2) > min.z && voxel_loc(2) < max.z))
+                {
+                  umap_insidebox[voxel].bbox_index = bbox_i;
+                  used_map_set_vec[bbox_i].insert(voxel);
+                }
+              }
+            }
           }
         }
-      }
-    }
-  }
+      });
+
+  //
 
   for (int bbox_i = 0; bbox_i < bbox.Center.size(); bbox_i++)
   {
@@ -376,52 +386,61 @@ void DynObjCluster::PubClusterResult_voxel(
   // std::for_each(
   //     std::execution::par, index_bbox.begin(), index_bbox.end(),
   //     [&](const int &k) {
-  BOOST_FOREACH (int k, index_bbox)
-  {
-    geometry_msgs::PoseWithCovarianceStamped center = bbox.Center[k];
-    float x_size = center.pose.covariance[3 * 6 + 3];
-    float y_size = center.pose.covariance[4 * 6 + 4];
-    float z_size = center.pose.covariance[5 * 6 + 5];
-    float x_min = center.pose.covariance[3 * 6 + 2];
-    float y_min = center.pose.covariance[4 * 6 + 3];
-    float z_min = center.pose.covariance[5 * 6 + 4];
-    float x_max = center.pose.covariance[2 * 6 + 3];
-    float y_max = center.pose.covariance[3 * 6 + 4];
-    float z_max = center.pose.covariance[4 * 6 + 5];
 
-    Eigen::Vector3f ground_norm(0.0, 0.0, 0.0);
-    Eigen::Vector4f ground_plane;
-    ros::Time t_ge = ros::Time::now();
-    bool ground_detect = ground_estimate(
-        bbox.Ground_points[k], world_z, ground_norm, ground_plane,
-        bbox.true_ground[k], bbox.Ground_voxels_set[k]);
-    ground_estimate_total_time[k] = (ros::Time::now() - t_ge).toSec();
-    Eigen::Matrix3f R;
-    R.col(0) = ground_norm;
-    if (ground_detect)
-    {
-      ros::Time t_rg = ros::Time::now();
-      event_extend(R, ground_detect, bbox, dyn_tag, k);
-      region_growth_time[k] = (ros::Time::now() - t_rg).toSec();
-      ground_remove(ground_plane, bbox.Point_cloud[k],
-                    bbox.Point_indices[k], dyn_tag, bbox.true_ground[k],
-                    umap);
-    }
-    isolate_remove(bbox.Point_cloud[k], bbox.Point_indices[k], dyn_tag);
-    if ((float)bbox.umap_points_num[k] / (float)bbox.Point_cloud[k].size() <
-        thrustable_thresold) // not trustable
-    {
-      for (int i = 0; i < bbox.Point_indices[k].size(); i++)
+  // BOOST_FOREACH (int k, index_bbox)
+  // {
+  tbb::parallel_for(
+      tbb::blocked_range<size_t>(0, index_bbox.size()),
+      [&](const tbb::blocked_range<size_t> &r)
       {
-        dyn_tag[bbox.Point_indices[k][i]] = 0;
-      }
-    }
-    else
-    {
-      cluster_points += bbox.Point_cloud[k];
-      true_ground += bbox.true_ground[k];
-    }
-  }
+        for (size_t k = r.begin(); k != r.end(); ++k)
+        {
+          geometry_msgs::PoseWithCovarianceStamped center = bbox.Center[k];
+          float x_size = center.pose.covariance[3 * 6 + 3];
+          float y_size = center.pose.covariance[4 * 6 + 4];
+          float z_size = center.pose.covariance[5 * 6 + 5];
+          float x_min = center.pose.covariance[3 * 6 + 2];
+          float y_min = center.pose.covariance[4 * 6 + 3];
+          float z_min = center.pose.covariance[5 * 6 + 4];
+          float x_max = center.pose.covariance[2 * 6 + 3];
+          float y_max = center.pose.covariance[3 * 6 + 4];
+          float z_max = center.pose.covariance[4 * 6 + 5];
+
+          Eigen::Vector3f ground_norm(0.0, 0.0, 0.0);
+          Eigen::Vector4f ground_plane;
+          ros::Time t_ge = ros::Time::now();
+          bool ground_detect = ground_estimate(
+              bbox.Ground_points[k], world_z, ground_norm, ground_plane,
+              bbox.true_ground[k], bbox.Ground_voxels_set[k]);
+          ground_estimate_total_time[k] = (ros::Time::now() - t_ge).toSec();
+          Eigen::Matrix3f R;
+          R.col(0) = ground_norm;
+          if (ground_detect)
+          {
+            ros::Time t_rg = ros::Time::now();
+            event_extend(R, ground_detect, bbox, dyn_tag, k);
+            region_growth_time[k] = (ros::Time::now() - t_rg).toSec();
+            ground_remove(ground_plane, bbox.Point_cloud[k],
+                          bbox.Point_indices[k], dyn_tag, bbox.true_ground[k],
+                          umap);
+          }
+          isolate_remove(bbox.Point_cloud[k], bbox.Point_indices[k], dyn_tag);
+          if ((float)bbox.umap_points_num[k] / (float)bbox.Point_cloud[k].size() <
+              thrustable_thresold) // not trustable
+          {
+            for (int i = 0; i < bbox.Point_indices[k].size(); i++)
+            {
+              dyn_tag[bbox.Point_indices[k][i]] = 0;
+            }
+          }
+          else
+          {
+            cluster_points += bbox.Point_cloud[k];
+            true_ground += bbox.true_ground[k];
+          }
+        }
+      });
+
   double total_ground_estimate_total_time = 0.0;
   double total_region_growth_time = 0.0;
   for (int i = 0; i < index_bbox.size(); i++)

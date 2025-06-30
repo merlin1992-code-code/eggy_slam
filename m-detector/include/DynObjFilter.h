@@ -30,6 +30,9 @@
 #include <Eigen/Core>
 #include <Eigen/LU>
 
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+
 #include <types.h>
 #include <parallel_q.h>
 #include <DynObjCluster.h>
@@ -352,10 +355,20 @@ public:
         double t = omp_get_wtime();
         // std::for_each(std::execution::par, index_vector.begin(), index_vector.end(), [&](const int &i)
         //               { depth_map[i].clear(); });
-        BOOST_FOREACH (int i, index_vector)
-        {
-            depth_map[i].clear();
-        }
+        // BOOST_FOREACH (int i, index_vector)
+        // {
+        //     depth_map[i].clear();
+        // }
+        tbb::parallel_for(
+            tbb::blocked_range<size_t>(0, index_vector.size()),
+            [&](const tbb::blocked_range<size_t> &r)
+            {
+                for (size_t idx = r.begin(); idx != r.end(); ++idx)
+                {
+                    int i = index_vector[idx];
+                    depth_map[i].clear();
+                }
+            });
         fill_n(min_depth_static, MAX_2D_N, 0.0);
         fill_n(min_depth_all, MAX_2D_N, 0.0);
         fill_n(max_depth_all, MAX_2D_N, 0.0);
