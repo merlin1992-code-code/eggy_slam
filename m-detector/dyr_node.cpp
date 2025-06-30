@@ -1,14 +1,10 @@
-/****************************************
- * @Copyright    : [2023] <yysd2007>
- * @FilePath     : main.cpp
- * @Version      : 1.0
- * @Author       : yysd2007
- * @Date         : 2023-07-18 17:42:25
- * @LastEditors  : yysd2007
- * @LastEditTime : 2023-07-18 17:54:03
- * @Description  : 文件注释模板
- ****************************************/
-
+/*
+ * @Description: Do not Edit
+ * @Author: hao.lin (voyah perception)
+ * @Date: 2025-06-28 21:18:18
+ * @LastEditors: Do not Edit
+ * @LastEditTime: 2025-06-30 17:29:50
+ */
 #include <iostream>
 #include <dirent.h>
 
@@ -33,13 +29,19 @@ V3D gps2enu(double lon, double lat, double alt)
   return cur_pos;
 }
 
-/**
- * @Description  : 函数注释模板
- * @return        {*}
- */
 int main(int argc, char *argv[])
 {
-  std::string root_dir = "/Users/linhao/Desktop/raw_forYY/";
+
+  AppConfig cfg;
+  parse_args(argc, argv, cfg);
+  if (!check_and_collect_files(cfg))
+    return -1;
+  std::cout << "Config file: " << cfg.config_path << std::endl;
+  YAML::Node node = load_yaml(cfg.config_path);
+  std::string m_cfg = node["M_detector_cfg"].as<std::string>();
+  std::string root_dir = node["root_dir"].as<std::string>();
+  std::string output_dir = node["output_dir"].as<std::string>();
+  ensure_out_dir(output_dir);
 
   RTKDataProcessor processor;
   std::unordered_map<unsigned long long, std::vector<double>> time_odom_map;
@@ -47,7 +49,7 @@ int main(int argc, char *argv[])
   processor.loadOdomData(root_dir + "rtk_odom.txt");
   time_odom_map = processor.processSyncFile(root_dir + "sync_time_list.txt");
 
-  NodeHandle nh;
+  NodeHandle nh(m_cfg);
   DynObjFilter *DynObjFilt = new DynObjFilter();
 
   DynObjFilt->init(nh);
@@ -96,16 +98,15 @@ int main(int argc, char *argv[])
     std::vector<double> odom = time_odom_map[time];
     cur_rot = Eigen::Quaterniond(odom[6], odom[3], odom[4], odom[5])
                   .toRotationMatrix();
-                  
+
     cur_pos = gps2enu(odom[0], odom[1], odom[2]);
     cur_time = time / 1e9;
-    // cur_time += 0.1;
     std::cout << std::fixed << std::setprecision(6);
     std::cout << "cur_pos: " << cur_pos.transpose() << std::endl;
     std::cout << "cur_rot: " << cur_rot << std::endl;
     std::cout << "cur_time: " << cur_time << std::endl;
     DynObjFilt->filter(cur_pc, cur_rot, cur_pos, cur_time);
-    DynObjFilt->publish_dyn("output", file_name);
+    DynObjFilt->publish_dyn(output_dir, file_name);
   }
   return 0;
 }

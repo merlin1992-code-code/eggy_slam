@@ -10,6 +10,9 @@
 #include <algorithm>
 #include <chrono>
 #include <any>
+#include <filesystem>
+#include <yaml-cpp/yaml.h>
+#include <string>
 
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
@@ -30,6 +33,7 @@
 #include <types.h>
 #include <parallel_q.h>
 #include <DynObjCluster.h>
+#include "utils.h"
 
 using namespace std;
 using namespace Eigen;
@@ -189,8 +193,6 @@ struct point_soph
     ~point_soph() {
     };
 
-
-    
     void GetVec(V3D &point, float &hor_resolution_max, float &ver_resolution_max)
     {
         vec(2) = float(point.norm());
@@ -366,23 +368,52 @@ public:
 class NodeHandle
 {
 public:
-    template <typename T>
-    void param(const std::string &name, T &value, const T &default_value)
+    YAML::Node config;
+
+    NodeHandle(const std::string &yaml_file)
     {
-        if (params_.find(name) != params_.end())
+        if (!std::filesystem::exists(yaml_file))
         {
-            value = std::any_cast<T>(params_[name]);
+            std::cerr << "[NodeHandle] YAML 文件不存在: " << yaml_file << std::endl;
+            throw std::runtime_error("YAML file not found");
         }
-        else
+        try
         {
-            value = default_value;
+            config = YAML::LoadFile(yaml_file);
+        }
+        catch (const std::exception &e)
+        {
+            std::cerr << "[NodeHandle] 读取 YAML 文件失败: " << yaml_file << "\n"
+                      << "原因: " << e.what() << std::endl;
+            throw;
         }
     }
 
     template <typename T>
-    void setParam(const std::string &name, const T &value)
+    void param(const std::string &key, T &var, const T &default_val)
     {
-        params_[name] = value;
+        size_t pos = key.find('/');
+        std::string group = key.substr(0, pos);
+        std::string subkey = key.substr(pos + 1);
+        if (config[group] && config[group][subkey])
+        {
+            try
+            {
+                var = config[group][subkey].as<T>();
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "[NodeHandle] 参数类型转换失败: " << key
+                          << "，使用默认值: " << default_val << std::endl;
+                var = default_val;
+            }
+        }
+        else
+        {
+            std::cerr << "[NodeHandle] 未找到参数: " << key
+                      << "，使用默认值: " << default_val << std::endl;
+            var = default_val;
+        }
     }
 
 private:
@@ -488,6 +519,7 @@ public:
     ~DynObjFilter() {};
 
     void init(NodeHandle &nh);
+    void init_from_yaml(const std::string &yaml_path);
     void filter(PointCloudXYZI::Ptr feats_undistort, const M3D &rot_end, const V3D &pos_end, const double &scan_end_time);
     void publish_dyn(std::string output_dir, std::string file_name);
     void set_path(string file_path, string file_path_origin);

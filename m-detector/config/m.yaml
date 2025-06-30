@@ -1,0 +1,3 @@
+root_dir: /Users/linhao/Desktop/raw_forYY/
+M_detector_cfg: /Users/linhao/eggy_slam/m-detector/config/rs128.yaml
+output_dir: /Users/linhao/Desktop/raw_forYY/output/

@@ -16,12 +16,14 @@ void DynObjFilter::init(NodeHandle &nh)
   nh.param<float>("dyn_obj/self_x_b", self_x_b, -0.5f);
   nh.param<float>("dyn_obj/self_y_l", self_y_l, 2.2f);
   nh.param<float>("dyn_obj/self_y_r", self_y_r, -1.0f);
-  nh.param<float>("dyn_obj/blind_dis", blind_dis, 0.3f);
+
+  nh.param<float>("dyn_obj/blind_dis", blind_dis, 0.4f);
   nh.param<float>("dyn_obj/fov_up", fov_up, 15.0f);      // 2.4f
   nh.param<float>("dyn_obj/fov_down", fov_down, -25.0f); //-17.6f
   nh.param<float>("dyn_obj/fov_cut", fov_cut, 0.0f);
   nh.param<float>("dyn_obj/fov_left", fov_left, 180.0f);
   nh.param<float>("dyn_obj/fov_right", fov_right, -180.0f);
+
   nh.param<int>("dyn_obj/checkneighbor_range", checkneighbor_range, 1);
   nh.param<bool>("dyn_obj/stop_object_detect", stop_object_detect, false);
   nh.param<float>("dyn_obj/depth_thr1", depth_thr1, 0.15f);
@@ -290,10 +292,6 @@ void DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort,
     p[i].local = p_body;
     p[i].intensity = feats_undistort->points[i].intensity;
     p[i].point = feats_undistort->points[i];
-    if (dataset == 0 && fabs(intensity - 666) < 10E-4)
-    {
-      p[i].is_distort = true;
-    }
     if (InvalidPointCheck(p_body, intensity))
     {
       p[i].dyn = INVALID;
@@ -796,10 +794,7 @@ void DynObjFilter::SphericalProjection(point_soph &p, int depth_index,
 
 bool DynObjFilter::InvalidPointCheck(const V3D &body, const int intensity)
 {
-  if ((pow(body(0), 2) + pow(body(1), 2) + pow(body(2), 2)) <
-          blind_dis * blind_dis ||
-      (dataset == 1 && fabs(body(0)) < 0.1 && fabs(body(1)) < 1.0) &&
-          fabs(body(2)) < 0.1)
+  if ((pow(body(0), 2) + pow(body(1), 2) + pow(body(2), 2)) < blind_dis * blind_dis)
   {
     return true;
   }
@@ -2131,7 +2126,19 @@ bool DynObjFilter::Case3DepthConsistencyCheck(const point_soph &p,
 
 void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
 {
-  std::filesystem::create_directories(output_dir);
+  ensure_out_dir(output_dir);
+  std::string world_dir = output_dir + "/dyn_world";
+  std::string cluster_dir = output_dir + "/dyn_cluster";
+  std::string std_cluster_down_dir = output_dir + "/std_cluster_down";
+  std::string std_cluster_pub_dir = output_dir + "/std_cluster_pub";
+  std::string std_cluster_dir = output_dir + "/std_cluster";
+  ensure_out_dir(world_dir);
+  ensure_out_dir(cluster_dir);
+  ensure_out_dir(std_cluster_down_dir);
+  ensure_out_dir(std_cluster_pub_dir);
+  ensure_out_dir(std_cluster_dir);
+  
+
   if (cluster_coupled) // pubLaserCloudEffect pub_pcl_dyn_extend
                        // pubLaserCloudEffect_depth
   {
@@ -2149,14 +2156,18 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
   cout << "case1 num: " << case1_num << " case2 num: " << case2_num
        << " case3 num: " << case3_num << endl;
 
-  if (!laserCloudDynObj_world->empty()) // /m_detector/point_out
-    pcl::io::savePCDFileBinary(output_dir + "/point_out/" + file_name,
+  case1_num = 0;
+  case2_num = 0;
+  case3_num = 0;
+
+  if (!laserCloudDynObj_world->empty()) // /m_detector/world
+    pcl::io::savePCDFileBinary(world_dir + "/" + file_name,
                                *laserCloudDynObj_world);
 
   if (cluster_coupled || cluster_future)
   {
-    if (!laserCloudDynObj_clus->empty()) // /m_detector/frame_out
-      pcl::io::savePCDFileBinary(output_dir + file_name,
+    if (!laserCloudDynObj_clus->empty()) // /m_detector/dyn_cluster
+      pcl::io::savePCDFileBinary(cluster_dir + "/" + file_name,
                                  *laserCloudDynObj_clus);
   }
 
@@ -2181,15 +2192,14 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
         *laserCloudSteadObj_pub += *laserCloudSteadObj_accu[i];
       }
     }
-    pcl::VoxelGrid<PointType> downSizeFiltermap;
-    downSizeFiltermap.setLeafSize(voxel_filter_size, voxel_filter_size,
-                                  voxel_filter_size);
-    downSizeFiltermap.setInputCloud(laserCloudSteadObj_pub);
-
-    PointCloudXYZI laserCloudSteadObj_down;
-    downSizeFiltermap.filter(laserCloudSteadObj_down);
+    // pcl::VoxelGrid<PointType> downSizeFiltermap;
+    // downSizeFiltermap.setLeafSize(voxel_filter_size, voxel_filter_size,
+    //                               voxel_filter_size);
+    // downSizeFiltermap.setInputCloud(laserCloudSteadObj_pub);
+    // PointCloudXYZI laserCloudSteadObj_down;
+    // downSizeFiltermap.filter(laserCloudSteadObj_down);
     // if (!laserCloudSteadObj_down.empty())  // /m_detector/std_points
-    //   pcl::io::savePCDFileBinary(output_dir + "/std_points/" + file_name,
+    //   pcl::io::savePCDFileBinary(std_cluster_down_dir + "/" + file_name,
     //                             laserCloudSteadObj_down);
   }
   else
@@ -2214,17 +2224,13 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
         *laserCloudSteadObj_pub += *laserCloudSteadObj_accu[i];
       }
     }
-    // if (!laserCloudSteadObj_pub->empty())  // /m_detector/std_points
-    //   pcl::io::savePCDFileBinary(output_dir + "/std_points/" + file_name,
-    //                             *laserCloudSteadObj_pub);
+    if (!laserCloudSteadObj_pub->empty())  // /m_detector/std_points
+      pcl::io::savePCDFileBinary(std_cluster_pub_dir + "/" + file_name,
+                                *laserCloudSteadObj_pub);
   }
   if (!laserCloudSteadObj_clus->empty()) // /m_detector/std_points
-    pcl::io::savePCDFileBinary(output_dir + "/std_points/" + file_name,
+    pcl::io::savePCDFileBinary(std_cluster_dir + "/" + file_name,
                                *laserCloudSteadObj_clus);
-
-  case1_num = 0;
-  case2_num = 0;
-  case3_num = 0;
 }
 
 void DynObjFilter::set_path(string file_path, string file_path_origin)

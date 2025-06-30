@@ -1,14 +1,20 @@
-
+#ifndef UTILS_H
+#define UTILS_H
 #pragma once
 #include <fstream>
 #include <sstream>
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
+#include <yaml-cpp/yaml.h>
+
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
+
+using namespace std;
 
 struct GPSData
 {
@@ -193,9 +199,6 @@ inline bool rs128_handler(const std::string &pcd_path, pcl::PointCloud<pcl::Poin
     added_pt.y = y;
     added_pt.z = z;
     added_pt.intensity = pl_orig.points[i].intensity;
-    added_pt.normal_x = 0;
-    added_pt.normal_y = 0;
-    added_pt.normal_z = 0;
     added_pt.curvature = static_cast<float>(pl_orig.points[i].timestamp);
     cloud->push_back(added_pt);
   }
@@ -205,3 +208,60 @@ inline bool rs128_handler(const std::string &pcd_path, pcl::PointCloud<pcl::Poin
             << num_out_of_range_pt << " out of range points filtered. " << std::endl;
   return true;
 }
+
+struct AppConfig
+{
+  string config_path = "config.yaml";
+};
+
+inline void parse_args(int argc, char **argv, AppConfig &cfg)
+{
+  for (int i = 1; i < argc; ++i)
+  {
+    std::string arg = argv[i];
+    if (arg.rfind("--cfg=", 0) == 0)
+      cfg.config_path = arg.substr(6);
+  }
+}
+
+inline bool check_and_collect_files(AppConfig &cfg)
+{
+  struct stat buffer;
+  if (stat(cfg.config_path.c_str(), &buffer) != 0)
+  {
+    std::cerr << "配置文件不存在: " << cfg.config_path << std::endl;
+    return false;
+  }
+  return true;
+}
+
+inline YAML::Node load_yaml(const std::string &yaml_file)
+{
+  YAML::Node config;
+  if (!std::filesystem::exists(yaml_file))
+  {
+    std::cerr << "[load_yaml] YAML 文件不存在: " << yaml_file << std::endl;
+    throw std::runtime_error("YAML file not found");
+  }
+  try
+  {
+    config = YAML::LoadFile(yaml_file);
+  }
+  catch (const std::exception &e)
+  {
+    std::cerr << "[load_yaml] 读取 YAML 文件失败: " << yaml_file << "\n"
+              << "原因: " << e.what() << std::endl;
+    throw;
+  }
+  return config;
+}
+
+inline void ensure_out_dir(const string &out_dir)
+{
+  if (!std::filesystem::exists(out_dir))
+  {
+    std::filesystem::create_directories(out_dir);
+  }
+}
+
+#endif // UTILS_H
