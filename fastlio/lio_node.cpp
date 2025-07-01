@@ -3,8 +3,11 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 13:16:45
+ * @LastEditTime: 2025-07-01 15:19:17
  */
+
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
 
 #include "lio_node.h"
 
@@ -156,6 +159,16 @@ void LIONode::execute()
     {
         imuCB(imu_msg);
     }
+    // 并行处理 IMU 数据
+    // tbb::parallel_for(
+    //     tbb::blocked_range<size_t>(0, imu_vec.size()),
+    //     [&](const tbb::blocked_range<size_t> &r)
+    //     {
+    //         for (size_t i = r.begin(); i != r.end(); ++i)
+    //         {
+    //             imuCB(imu_vec[i]);
+    //         }
+    //     });
     int frame = 0;
     BOOST_FOREACH (const sensor_msgs::PointCloud2Ptr &lidar_msg, lidar_vec)
     {
@@ -177,6 +190,13 @@ void LIONode::execute()
                 break;
             body_cloud_ = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_kf->x().r_il, m_kf->x().t_il);
             world_cloud_ = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_builder->lidar_processor()->r_wl(), m_builder->lidar_processor()->t_wl());
+            r_il_ = m_builder->lidar_processor()->r_wl();
+            t_il_ = m_builder->lidar_processor()->t_wl();
+            if (1)
+            {
+                std::cout << "r_il: " << r_il_.transpose() << std::endl;
+                std::cout << "t_il: " << t_il_.transpose() << std::endl;
+            }
             *global_map += *world_cloud_;
             if (frame == 10)
             {
@@ -187,4 +207,38 @@ void LIONode::execute()
             frame++;
         }
     }
+}
+
+double LIONode::scan_end_time()
+{
+    return m_package.cloud_end_time;
+}
+
+void LIONode::processPackage()
+{
+    m_builder->process(m_package);
+}
+
+bool LIONode::checkMappingStatus() const
+{
+    return m_builder->status() != BuilderStatus::MAPPING;
+}
+
+CloudType::Ptr LIONode::getBodyCloud()
+{
+    return m_builder->lidar_processor()->transformCloud(m_package.cloud, m_kf->x().r_il, m_kf->x().t_il);
+}
+
+CloudType::Ptr LIONode::getWorldCloud()
+{
+    return m_builder->lidar_processor()->transformCloud(m_package.cloud, m_builder->lidar_processor()->r_wl(), m_builder->lidar_processor()->t_wl());
+}
+
+M3D LIONode::getRIL()
+{
+    return m_builder->lidar_processor()->r_wl();
+}
+V3D LIONode::getTIL()
+{
+    return m_builder->lidar_processor()->t_wl();
 }

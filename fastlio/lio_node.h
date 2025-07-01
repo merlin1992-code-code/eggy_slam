@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 13:18:06
+ * @LastEditTime: 2025-07-01 14:46:53
  */
 #include <chrono>
 #include <filesystem>
@@ -51,15 +51,23 @@ class LIONode
 public:
     explicit LIONode(const std::string &config_path);
     void execute();
-    CloudType::Ptr getBodyCloud() const { return body_cloud_; }
-    CloudType::Ptr getWorldCloud() const { return world_cloud_; }
+    CloudType::Ptr getBodyCloud();
+    CloudType::Ptr getWorldCloud();
+    M3D getRIL();
+    V3D getTIL();
+    double scan_end_time();
+    std::vector<sensor_msgs::PointCloud2Ptr> getLidarVec() const { return lidar_vec; }
+    std::vector<sensor_msgs::ImuPtr> getImuVec() const { return imu_vec; }
+    void imuCB(const sensor_msgs::ImuConstPtr msg);
+    void lidarCB(const sensor_msgs::PointCloud2Ptr msg);
+    bool syncPackage();
+    void processPackage();
+    bool checkMappingStatus() const;
+    
 
 private:
     void loadParameters(const std::string &config_path = "config.yaml");
     void init_buffer();
-    void imuCB(const sensor_msgs::ImuConstPtr msg);
-    void lidarCB(const sensor_msgs::PointCloud2Ptr msg);
-    bool syncPackage();
 
 private:
     YAML::Node config;
@@ -74,5 +82,7 @@ private:
     std::shared_ptr<CloudType> global_map{new CloudType};
     CloudType::Ptr body_cloud_{new CloudType};
     CloudType::Ptr world_cloud_{new CloudType};
+    M3D r_il_;
+    V3D t_il_;
     CloudViewer cloud_viewer;
 };

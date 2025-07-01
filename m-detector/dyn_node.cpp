@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 21:18:18
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 13:19:49
+ * @LastEditTime: 2025-07-01 15:14:10
  */
 #include "dyn_node.h"
 #include <iostream>
@@ -38,10 +38,6 @@ DynNode::DynNode(const std::string &config_path)
   DynObjFilt_->init(*nh_);
 }
 
-void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &rot, V3D &pos, double scan_end_time)
-{
-  DynObjFilt_->filter(cloud, rot, pos, scan_end_time);
-}
 void DynNode::execute()
 {
   cur_rot = Eigen::Matrix3d::Identity();
@@ -94,4 +90,16 @@ void DynNode::execute()
     DynObjFilt_->filter(cur_pc, cur_rot, cur_pos, cur_time);
     DynObjFilt_->publish_dyn(output_dir_, file_name);
   }
+}
+
+void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &rot, V3D &pos, double scan_end_time)
+{
+  DynObjFilt_->filter(cloud, rot, pos, scan_end_time);
+  std::cout << std::fixed << std::setprecision(6);
+  std::cout << "cur_pos: " << pos.transpose() << std::endl;
+  std::cout << "cur_rot: " << rot << std::endl;
+  std::cout << "cur_time: " << scan_end_time << std::endl;
+  unsigned long long scan_time_int = static_cast<unsigned long long>(scan_end_time);
+  std::string scan_file_name = std::to_string(scan_time_int) + ".pcd";
+  DynObjFilt_->publish_dyn(output_dir_, scan_file_name);
 }
