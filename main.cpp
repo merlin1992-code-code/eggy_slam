@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 20:43:56
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 15:22:15
+ * @LastEditTime: 2025-07-01 15:34:42
  */
 #include <iostream>
 #include <string>
@@ -30,8 +30,7 @@ int main(int argc, char **argv)
 
     auto lio_node = std::make_shared<LIONode>(lio_config);
     // lio excute outside of main thread
-    // lio_node->execute();
-#if 1
+    // lio_node->execute()
     auto dyn_node = std::make_shared<DynNode>(dyn_config);
     // dyn_node->execute();
 
@@ -71,8 +70,6 @@ int main(int argc, char **argv)
             dyn_node->execute_odom(body_cloud, r_il, t_il, lio_node->scan_end_time());
         }
     }
-#endif 
-    //
 
     return 0;
 }
