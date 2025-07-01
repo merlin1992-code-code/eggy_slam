@@ -370,8 +370,8 @@ void DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort,
   }
   int num_1 = 0, num_2 = 0, num_3 = 0, num_inval = 0, num_neag = 0;
   double clus_before = omp_get_wtime(); // rec computation time
-  std_msgs::Header header_clus;
-  header_clus.stamp = ros::Time::fromSec(scan_end_time).toMicro();
+  cluster::std_msgs::Header header_clus;
+  header_clus.stamp = cluster::ros::Time::fromSec(scan_end_time).toMicro();
   header_clus.frame_id = frame_id;
   if (cluster_coupled || cluster_future)
   {

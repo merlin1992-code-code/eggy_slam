@@ -1,0 +1,7 @@
+bag_path: "../data/voyahGT.bag"
+#point cloud
+point_topic: "/RS/lidar"
+pcd_folder: "/Users/linhao/Downloads/raw/pcd/middle"
+#imu
+imu_topic: "/RS/imu"
+imu_txt: "/Users/linhao/Downloads/raw/rtk_imu.txt"

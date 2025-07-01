@@ -1,6 +1,13 @@
-#ifndef UTILS_H
-#define UTILS_H
-#pragma once
+#ifndef M_UTILS_H
+#define M_UTILS_H
+
+/*
+ * @Description: Do not Edit
+ * @Author: hao.lin && yangying (voyah perception)
+ * @Date: 2025-07-01 10:00:43
+ * @LastEditors: Do not Edit
+ * @LastEditTime: 2025-07-01 11:37:37
+ */
 #include <fstream>
 #include <sstream>
 #include <filesystem>
@@ -13,6 +20,10 @@
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
 #include <pcl/io/pcd_io.h>
+
+#include <proj.h>
+
+#include "types.h"
 
 using namespace std;
 
@@ -264,4 +275,22 @@ inline void ensure_out_dir(const string &out_dir)
   }
 }
 
-#endif // UTILS_H
+
+inline V3D gps2enu(double lon, double lat, double alt)
+{
+  PJ_CONTEXT *C = proj_context_create();
+
+  PJ *P = proj_create_crs_to_crs(
+      C, "EPSG:4326", "+proj=utm +zone=50 +datum=WGS84 +type=crs", NULL);
+
+  PJ *norm = proj_normalize_for_visualization(C, P);
+  PJ_COORD gps = proj_coord(lon, lat, alt, 0);
+  PJ_COORD enu = proj_trans(norm, PJ_FWD, gps);
+
+  V3D cur_pos(enu.enu.e, enu.enu.n, enu.enu.u);
+
+  return cur_pos;
+}
+
+
+#endif // M_UTILS_H

@@ -1,4 +1,4 @@
-rosbag: /Users/linhao/Traj-LO/data/voyah_bag/voyahGT.bag
+rosbag: /Users/linhao/eggy_slam/data/voyahGT.bag
 imu_topic: /RS/imu
 lidar_topic: /RS/lidar
 body_frame: body

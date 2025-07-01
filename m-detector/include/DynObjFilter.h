@@ -36,7 +36,7 @@
 #include <types.h>
 #include <parallel_q.h>
 #include <DynObjCluster.h>
-#include "utils.h"
+#include "m_utils.h"
 
 using namespace std;
 using namespace Eigen;
@@ -455,7 +455,7 @@ public:
     int laserCloudSteadObj_accu_limit = 5;
     float voxel_filter_size = 0.1;
 
-    DynObjCluster Cluster;
+    cluster::DynObjCluster Cluster;
     bool cluster_coupled = false, cluster_future = false;
     std::vector<int> dyn_tag_cluster;
     std::vector<int> dyn_tag_origin;

@@ -3,31 +3,14 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 21:18:18
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-06-30 17:29:50
+ * @LastEditTime: 2025-07-01 11:39:53
  */
 #include <iostream>
 #include <dirent.h>
 
 #include <proj.h>
-#include "utils.h"
+#include "m_utils.h"
 #include "DynObjFilter.h"
-
-
-V3D gps2enu(double lon, double lat, double alt)
-{
-  PJ_CONTEXT *C = proj_context_create();
-
-  PJ *P = proj_create_crs_to_crs(
-      C, "EPSG:4326", "+proj=utm +zone=50 +datum=WGS84 +type=crs", NULL);
-
-  PJ *norm = proj_normalize_for_visualization(C, P);
-  PJ_COORD gps = proj_coord(lon, lat, alt, 0);
-  PJ_COORD enu = proj_trans(norm, PJ_FWD, gps);
-
-  V3D cur_pos(enu.enu.e, enu.enu.n, enu.enu.u);
-
-  return cur_pos;
-}
 
 int main(int argc, char *argv[])
 {

@@ -6,7 +6,7 @@ class PARALLEL_Q
 {
 private:
     int counter = 0;
-    int Q_LEN;
+    int P_Q_LEN;
     bool is_empty, initialized = false;
 public:
     T * q;
@@ -36,8 +36,8 @@ PARALLEL_Q<T>::PARALLEL_Q()
 template <typename T>
 PARALLEL_Q<T>::PARALLEL_Q(int len)
 {
-    Q_LEN = len;
-    q = new T[Q_LEN];
+    P_Q_LEN = len;
+    q = new T[P_Q_LEN];
     initialized = true;
 }
 
@@ -50,8 +50,8 @@ PARALLEL_Q<T>::~PARALLEL_Q()
 template <typename T>
 void PARALLEL_Q<T>::init(int len)
 {
-    Q_LEN = len;
-    q = new T[Q_LEN];
+    P_Q_LEN = len;
+    q = new T[P_Q_LEN];
     initialized = true;
 }
 
@@ -62,7 +62,7 @@ void PARALLEL_Q<T>::pop()
     if (counter == 0)
         return;
     head++;
-    head %= Q_LEN;
+    head %= P_Q_LEN;
     counter--;
     if (counter == 0)
         is_empty = true;
@@ -80,7 +80,7 @@ template <typename T>
 T PARALLEL_Q<T>::back()
 {
     assert(initialized && "Queue is not initialized!");
-    return q[(tail + Q_LEN -1) % Q_LEN];
+    return q[(tail + P_Q_LEN -1) % P_Q_LEN];
 }
 
 template <typename T>
@@ -98,7 +98,7 @@ template <typename T>
 void PARALLEL_Q<T>::push(T op)
 {
     assert(initialized && "Queue is not initialized!");
-    if (counter == Q_LEN)
+    if (counter == P_Q_LEN)
     {
         printf("Queue FULL. Head Element Popped! ");
         pop();
@@ -108,37 +108,37 @@ void PARALLEL_Q<T>::push(T op)
     if (is_empty)
         is_empty = false;
     tail++;
-    tail %= Q_LEN;
+    tail %= P_Q_LEN;
 }
 
 template <typename T>
 void PARALLEL_Q<T>::push_pos(T &op, int index)
 {
     assert(initialized && "Queue is not initialized!");
-    if (counter == Q_LEN)
+    if (counter == P_Q_LEN)
     {
         printf("Queue FULL. Head Element Popped! ");
         pop();
     }
     counter++;
-    index %= Q_LEN;
+    index %= P_Q_LEN;
     q[index] = op;
     if (is_empty)
         is_empty = false;
     tail++;
-    tail %= Q_LEN;
+    tail %= P_Q_LEN;
 }
 
 template <typename T>
 void PARALLEL_Q<T>::push_parallel(T &op, int index)
 {   
     assert(initialized && "Queue is not initialized!");
-    if (counter == Q_LEN)
+    if (counter == P_Q_LEN)
     {   
         printf("Queue FULL. Head Element Popped! ");
         pop();
     }
-    index %= Q_LEN;
+    index %= P_Q_LEN;
     q[index] = op;
 }
 
@@ -146,8 +146,8 @@ template <typename T>
 void PARALLEL_Q<T>::push_parallel_prepare(int length)
 {
     assert(initialized && "Queue is not initialized!");
-    assert(counter + length < Q_LEN && "Push Length is out of Queue Capacity!");
-    if (counter == Q_LEN)
+    assert(counter + length < P_Q_LEN && "Push Length is out of Queue Capacity!");
+    if (counter == P_Q_LEN)
     {
         printf("Queue FULL. Head Element Popped! ");
         pop();
@@ -156,7 +156,7 @@ void PARALLEL_Q<T>::push_parallel_prepare(int length)
     if (is_empty)
         is_empty = false;
     tail += length;
-    tail %= Q_LEN;
+    tail %= P_Q_LEN;
 }
 
 template <typename T>
