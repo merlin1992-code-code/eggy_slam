@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-06-28 20:51:54
+ * @LastEditTime: 2025-07-01 13:16:45
  */
 
 #include "lio_node.h"
@@ -175,9 +175,9 @@ void LIONode::execute()
 
             if (m_builder->status() != BuilderStatus::MAPPING)
                 break;
-            CloudType::Ptr body_cloud = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_kf->x().r_il, m_kf->x().t_il);
-            CloudType::Ptr world_cloud = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_builder->lidar_processor()->r_wl(), m_builder->lidar_processor()->t_wl());
-            *global_map += *world_cloud;
+            body_cloud_ = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_kf->x().r_il, m_kf->x().t_il);
+            world_cloud_ = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_builder->lidar_processor()->r_wl(), m_builder->lidar_processor()->t_wl());
+            *global_map += *world_cloud_;
             if (frame == 10)
             {
                 std::cout << "Saving global map to global_map.pcd" << std::endl;

@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-06-28 20:45:29
+ * @LastEditTime: 2025-07-01 13:18:06
  */
 #include <chrono>
 #include <filesystem>
@@ -51,6 +51,8 @@ class LIONode
 public:
     explicit LIONode(const std::string &config_path);
     void execute();
+    CloudType::Ptr getBodyCloud() const { return body_cloud_; }
+    CloudType::Ptr getWorldCloud() const { return world_cloud_; }
 
 private:
     void loadParameters(const std::string &config_path = "config.yaml");
@@ -70,5 +72,7 @@ private:
     std::vector<sensor_msgs::PointCloud2Ptr> lidar_vec;
     std::vector<sensor_msgs::ImuPtr> imu_vec;
     std::shared_ptr<CloudType> global_map{new CloudType};
+    CloudType::Ptr body_cloud_{new CloudType};
+    CloudType::Ptr world_cloud_{new CloudType};
     CloudViewer cloud_viewer;
 };

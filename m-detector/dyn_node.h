@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-01 10:00:43
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 11:40:27
+ * @LastEditTime: 2025-07-01 13:19:27
  */
 #include <iostream>
 #include <dirent.h>
@@ -17,6 +17,7 @@ class DynNode
 public:
     DynNode(const std::string &config_path);
     void execute();
+    void execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &rot, V3D &pos, double scan_end_time);
 
 private:
     YAML::Node node_;

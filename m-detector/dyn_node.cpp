@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 21:18:18
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 11:17:26
+ * @LastEditTime: 2025-07-01 13:19:49
  */
 #include "dyn_node.h"
 #include <iostream>
@@ -38,6 +38,10 @@ DynNode::DynNode(const std::string &config_path)
   DynObjFilt_->init(*nh_);
 }
 
+void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &rot, V3D &pos, double scan_end_time)
+{
+  DynObjFilt_->filter(cloud, rot, pos, scan_end_time);
+}
 void DynNode::execute()
 {
   cur_rot = Eigen::Matrix3d::Identity();
