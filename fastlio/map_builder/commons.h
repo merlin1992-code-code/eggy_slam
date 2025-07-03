@@ -51,6 +51,7 @@ struct Config
     V3D t_il = V3D::Zero();
 
     double lidar_cov_inv = 1000.0;
+    int map_save_interval = 20;
 };
 
 struct IMUData

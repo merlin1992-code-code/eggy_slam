@@ -1,29 +1,33 @@
 dyn_obj:
-    points_topic: "/cloud_registered_body"
-    odom_topic: "/aft_mapped_to_init"
-    frame_id: "camera_init"
-    pc_topic: "/velodyne_points"
-    time_file: "time_stat.txt"
-
     dataset: 2 #0 for kitti, 1 for nuscenes, 2 for waymo, 3 for avia
     buffer_delay: 0.1
-    buffer_size: 1000000
-    points_num_perframe: 250000
+    buffer_size: 700000
+    points_num_perframe: 300000
     depth_map_dur: 0.2
-    max_depth_map_num: 10
-    max_pixel_points: 5
+
+    max_depth_map_num: 5 #10
+    max_pixel_points: 5 #5
     frame_dur: 0.1
     self_x_f: 0.5
     self_x_b: -0.5
     self_y_l: 2.2
     self_y_r: -1.0
     blind_dis: 0.3
+    #fov parameters
+    # fov_up: 15.0
+    # fov_down: -25.0
     fov_up: 2.4
     fov_down: -17.6
+    
     fov_left: 180.0
     fov_right: -180.0
     fov_cut: 0
+
+    #resolution parameters
+    hor_resolution_max: 0.005 # 0.005
+    ver_resolution_max: 0.01 # 0.01
     
+    #case1 parameters
     depth_thr1: 0.15
     enter_min_thr1: 1.0
     enter_max_thr1: 0.3
@@ -42,6 +46,7 @@ dyn_obj:
     occluded_map_thr1: 2
     case1_interp_en: true
 
+    #case2 parameters
     v_min_thr2: 0.5
     acc_thr2: 7.0
     map_cons_depth_thr2: 0.2
@@ -58,6 +63,7 @@ dyn_obj:
     k_depth2: 0.005
     case2_interp_en: false
 
+    #case3 parameters
     v_min_thr3: 0.5
     acc_thr3: 15.0
     map_cons_depth_thr3: 0.2
@@ -89,17 +95,17 @@ dyn_obj:
     debug_x: 7.2065
     debug_y: -3.1844
     debug_z: -0.89005
+    
+    #cluster parameters
     cluster_coupled: true
     cluster_future: true
-    cluster_extend_pixel: 2
-    cluster_min_pixel_number: 3
-    cluster_Voxel_revolusion: 0.3
+    cluster_extend_pixel: 2 #2
+    cluster_min_pixel_number: 3 #3
+    cluster_Voxel_revolusion: 0.3 #0.3
 
 
     dyn_filter_en: false
     debug_publish: false
     
 
-    ver_resolution_max: 0.01
-    hor_resolution_max: 0.005
     

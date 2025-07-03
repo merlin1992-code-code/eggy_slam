@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 15:19:17
+ * @LastEditTime: 2025-07-03 10:44:11
  */
 
 #include <tbb/parallel_for.h>
@@ -58,6 +58,7 @@ void LIONode::loadParameters(const std::string &config_path)
     m_builder_config.t_il << t_il_vec[0], t_il_vec[1], t_il_vec[2];
     m_builder_config.r_il << r_il_vec[0], r_il_vec[1], r_il_vec[2], r_il_vec[3], r_il_vec[4], r_il_vec[5], r_il_vec[6], r_il_vec[7], r_il_vec[8];
     m_builder_config.lidar_cov_inv = config["lidar_cov_inv"].as<double>();
+    m_builder_config.map_save_interval = config["map_save_interval"].as<int>();
 }
 
 void LIONode::init_buffer()
@@ -77,7 +78,6 @@ void LIONode::init_buffer()
 
 void LIONode::imuCB(const sensor_msgs::ImuConstPtr msg)
 {
-    // std::cout << "imuCB" << std::endl;
     double timestamp = msg->header.stamp.toNSec();
     if (timestamp < m_state_data.last_imu_time)
     {
@@ -118,20 +118,17 @@ bool LIONode::syncPackage()
         std::sort(m_package.cloud->points.begin(), m_package.cloud->points.end(), [](PointType &p1, PointType &p2)
                   { return p1.curvature < p2.curvature; });
 
-        auto &pts = m_package.cloud->points;
-        if (!pts.empty())
-        {
-            std::cout << std::fixed << std::setprecision(0)
-                      << "[校验] first curvature: " << pts.front().curvature
-                      << ", last curvature: " << pts.back().curvature
-                      << ", diff: " << (pts.back().curvature - pts.front().curvature)
-                      << std::endl;
-        }
+        // auto &pts = m_package.cloud->points;
+        // if (!pts.empty())
+        // {
+        //     std::cout << std::fixed << std::setprecision(0)
+        //               << "[校验] first curvature: " << pts.front().curvature
+        //               << ", last curvature: " << pts.back().curvature
+        //               << ", diff: " << (pts.back().curvature - pts.front().curvature)
+        //               << std::endl;
+        // }
         m_package.cloud_start_time = m_state_data.lidar_buffer.front().first;
         m_package.cloud_end_time = m_package.cloud_start_time + double(m_package.cloud->points.back().curvature);
-        // std::cout << std::fixed << std::setprecision(9) << "Lidar cloud: start_time                  = " << m_package.cloud_start_time << std::endl;
-        // std::cout << std::fixed << std::setprecision(9) << "m_package.cloud->points.back().curvature = " << m_package.cloud->points.back().curvature << std::endl;
-        // std::cout << std::fixed << std::setprecision(9) << "end_time                                 = " << m_package.cloud_end_time << std::endl;
         m_state_data.lidar_pushed = true;
     }
     if (m_state_data.last_imu_time < m_package.cloud_end_time)
@@ -159,16 +156,6 @@ void LIONode::execute()
     {
         imuCB(imu_msg);
     }
-    // 并行处理 IMU 数据
-    // tbb::parallel_for(
-    //     tbb::blocked_range<size_t>(0, imu_vec.size()),
-    //     [&](const tbb::blocked_range<size_t> &r)
-    //     {
-    //         for (size_t i = r.begin(); i != r.end(); ++i)
-    //         {
-    //             imuCB(imu_vec[i]);
-    //         }
-    //     });
     int frame = 0;
     BOOST_FOREACH (const sensor_msgs::PointCloud2Ptr &lidar_msg, lidar_vec)
     {
@@ -183,7 +170,7 @@ void LIONode::execute()
             if (m_node_config.print_time_cost)
             {
                 auto time_used = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count() * 1000;
-                std::cout << "Processing time: " << std::fixed << std::setprecision(2) << time_used << " ms" << std::endl;
+                std::cout << "LIO Processing time: " << std::fixed << std::setprecision(2) << time_used << " ms" << std::endl;
             }
 
             if (m_builder->status() != BuilderStatus::MAPPING)
@@ -198,11 +185,10 @@ void LIONode::execute()
                 std::cout << "t_il: " << t_il_.transpose() << std::endl;
             }
             *global_map += *world_cloud_;
-            if (frame == 10)
+            if (frame % m_builder_config.map_save_interval == 0)
             {
                 std::cout << "Saving global map to global_map.pcd" << std::endl;
                 pcl::io::savePCDFileASCII("global_map" + std::to_string(frame) + ".pcd", *global_map);
-                return;
             }
             frame++;
         }

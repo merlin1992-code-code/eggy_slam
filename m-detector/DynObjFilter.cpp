@@ -2172,6 +2172,7 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
          << " Average total time: " << time_total_avr << endl;
   }
   cout << "case1 num: " << case1_num << " case2 num: " << case2_num
+  
        << " case3 num: " << case3_num << endl;
 
   case1_num = 0;

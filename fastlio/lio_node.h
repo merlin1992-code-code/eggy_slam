@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 14:46:53
+ * @LastEditTime: 2025-07-03 10:40:10
  */
 #include <chrono>
 #include <filesystem>
@@ -63,7 +63,6 @@ public:
     bool syncPackage();
     void processPackage();
     bool checkMappingStatus() const;
-    
 
 private:
     void loadParameters(const std::string &config_path = "config.yaml");
