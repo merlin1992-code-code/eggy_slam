@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 20:43:56
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-03 10:42:11
+ * @LastEditTime: 2025-07-04 16:09:15
  */
 #include <iostream>
 #include <string>
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 {
     std::string lio_config, dyn_config;
     RunMode mode = MODE_FUSION; // 默认FUSION模式
-    for (int i = 1; i < argc - 1; ++i)
+    for (int i = 1; i < argc; ++i)
     {
         if (std::string(argv[i]) == "--lio")
             lio_config = argv[++i];

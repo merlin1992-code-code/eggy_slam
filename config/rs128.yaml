@@ -5,7 +5,7 @@ dyn_obj:
     points_num_perframe: 300000
     depth_map_dur: 0.2
 
-    max_depth_map_num: 5 #10
+    max_depth_map_num: 10 #10
     max_pixel_points: 5 #5
     frame_dur: 0.1
     self_x_f: 0.5
@@ -14,10 +14,10 @@ dyn_obj:
     self_y_r: -1.0
     blind_dis: 0.3
     #fov parameters
-    # fov_up: 15.0
-    # fov_down: -25.0
-    fov_up: 2.4
-    fov_down: -17.6
+    fov_up: 15.0
+    fov_down: -10.0
+    # fov_up: 2.4
+    # fov_down: -17.6
     
     fov_left: 180.0
     fov_right: -180.0
@@ -25,7 +25,7 @@ dyn_obj:
 
     #resolution parameters
     hor_resolution_max: 0.005 # 0.005
-    ver_resolution_max: 0.01 # 0.01
+    ver_resolution_max: 0.008 # 0.01
     
     #case1 parameters
     depth_thr1: 0.15

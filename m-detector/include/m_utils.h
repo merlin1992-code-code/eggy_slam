@@ -6,7 +6,7 @@
  * @Author: hao.lin && yangying (voyah perception)
  * @Date: 2025-07-01 10:00:43
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 11:37:37
+ * @LastEditTime: 2025-07-04 21:44:16
  */
 #include <fstream>
 #include <sstream>
@@ -40,6 +40,12 @@ struct OdomData
   double o_y;
   double o_z;
   double o_w;
+};
+
+struct PoseRecord
+{
+  Eigen::Vector3d pos;
+  Eigen::Matrix3d rot;
 };
 
 class RTKDataProcessor
@@ -184,6 +190,25 @@ inline bool rs128_handler(const std::string &pcd_path, pcl::PointCloud<pcl::Poin
   if (plsize == 0)
     return false;
   cloud->reserve(plsize);
+  int64_t ts_begin_ns = 0;
+  for (int i = 0; i < plsize; i++)
+  {
+    float x = pl_orig.points[i].x;
+    float y = pl_orig.points[i].y;
+    float z = pl_orig.points[i].z;
+    if (std::isnan(x) || std::isnan(y) || std::isnan(z))
+    {
+      num_invalid_pt += 1;
+      continue;
+    }
+    float r2 = x * x + y * y + z * z;
+    if (r2 < blind * blind || r2 > max_range * max_range)
+    {
+      num_out_of_range_pt += 1;
+      continue;
+    }
+    ts_begin_ns = static_cast<int64_t>(pl_orig.points[i].timestamp * 1e9);
+  }
 
   for (int i = 0; i < plsize; i++)
   {
@@ -210,7 +235,9 @@ inline bool rs128_handler(const std::string &pcd_path, pcl::PointCloud<pcl::Poin
     added_pt.y = y;
     added_pt.z = z;
     added_pt.intensity = pl_orig.points[i].intensity;
-    added_pt.curvature = static_cast<float>(pl_orig.points[i].timestamp);
+    int64_t ts_ns = static_cast<int64_t>(pl_orig.points[i].timestamp * 1e9);
+    int64_t offset_time_ns = ts_ns - ts_begin_ns;
+    added_pt.curvature = static_cast<float>(offset_time_ns);
     cloud->push_back(added_pt);
   }
 
@@ -275,7 +302,6 @@ inline void ensure_out_dir(const string &out_dir)
   }
 }
 
-
 inline V3D gps2enu(double lon, double lat, double alt)
 {
   PJ_CONTEXT *C = proj_context_create();
@@ -291,6 +317,5 @@ inline V3D gps2enu(double lon, double lat, double alt)
 
   return cur_pos;
 }
-
 
 #endif // M_UTILS_H

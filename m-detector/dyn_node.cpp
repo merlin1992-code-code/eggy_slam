@@ -1,9 +1,16 @@
 /*
  * @Description: Do not Edit
  * @Author: hao.lin (voyah perception)
+ * @Date: 2025-07-04 16:08:03
+ * @LastEditors: Do not Edit
+ * @LastEditTime: 2025-07-04 21:54:09
+ */
+/*
+ * @Description: Do not Edit
+ * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 21:18:18
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 15:14:10
+ * @LastEditTime: 2025-07-04 21:50:04
  */
 #include "dyn_node.h"
 #include <iostream>
@@ -27,7 +34,9 @@ DynNode::DynNode(const std::string &config_path)
   m_cfg_ = node_["M_detector_cfg"].as<std::string>();
   root_dir_ = node_["root_dir"].as<std::string>();
   output_dir_ = node_["output_dir"].as<std::string>();
+  output_fusion_dir_ = node_["output_fusion_dir"].as<std::string>();
   ensure_out_dir(output_dir_);
+  ensure_out_dir(output_fusion_dir_);
 
   processor_.loadGPSData(root_dir_ + "rtk_gps.txt");
   processor_.loadOdomData(root_dir_ + "rtk_odom.txt");
@@ -36,6 +45,21 @@ DynNode::DynNode(const std::string &config_path)
   nh_ = std::make_shared<NodeHandle>(m_cfg_);
   DynObjFilt_ = std::make_shared<DynObjFilter>();
   DynObjFilt_->init(*nh_);
+}
+
+void DynNode::saveTrajectory(const std::string &out_dir)
+{
+  std::ofstream traj_file(out_dir + "/trajectory.csv");
+  traj_file << "x,y,z,rot00,rot01,rot02,rot10,rot11,rot12,rot20,rot21,rot22\n";
+  for (const auto &rec : pose_records_)
+  {
+    traj_file << rec.pos.x() << "," << rec.pos.y() << "," << rec.pos.z();
+    for (int i = 0; i < 3; ++i)
+      for (int j = 0; j < 3; ++j)
+        traj_file << "," << rec.rot(i, j);
+    traj_file << "\n";
+  }
+  traj_file.close();
 }
 
 void DynNode::execute()
@@ -65,8 +89,13 @@ void DynNode::execute()
   sort(files.begin(), files.end());
 
   std::string file_name;
+  int count = 0;
   while (!files.empty())
   {
+    if (count++ % 10 == 0)
+    {
+      saveTrajectory(output_dir_);
+    }
     file_name = files.front();
     files.pop_front();
 
@@ -89,6 +118,7 @@ void DynNode::execute()
     std::cout << "cur_time: " << cur_time << std::endl;
     DynObjFilt_->filter(cur_pc, cur_rot, cur_pos, cur_time);
     DynObjFilt_->publish_dyn(output_dir_, file_name);
+    pose_records_.push_back({cur_pos, cur_rot});
   }
 }
 
@@ -102,4 +132,5 @@ void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D
   unsigned long long scan_time_int = static_cast<unsigned long long>(scan_end_time);
   std::string scan_file_name = std::to_string(scan_time_int) + ".pcd";
   DynObjFilt_->publish_dyn(output_dir_, scan_file_name);
+  pose_records_.push_back({pos, rot});
 }
