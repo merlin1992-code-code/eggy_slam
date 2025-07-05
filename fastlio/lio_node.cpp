@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-03 10:44:11
+ * @LastEditTime: 2025-07-05 18:40:06
  */
 
 #include <tbb/parallel_for.h>
@@ -177,12 +177,12 @@ void LIONode::execute()
                 break;
             body_cloud_ = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_kf->x().r_il, m_kf->x().t_il);
             world_cloud_ = m_builder->lidar_processor()->transformCloud(m_package.cloud, m_builder->lidar_processor()->r_wl(), m_builder->lidar_processor()->t_wl());
-            r_il_ = m_builder->lidar_processor()->r_wl();
-            t_il_ = m_builder->lidar_processor()->t_wl();
+            r_wl_ = m_builder->lidar_processor()->r_wl();
+            t_wl_ = m_builder->lidar_processor()->t_wl();
             if (1)
             {
-                std::cout << "r_il: " << r_il_.transpose() << std::endl;
-                std::cout << "t_il: " << t_il_.transpose() << std::endl;
+                std::cout << "r_wl: " << r_wl_.transpose() << std::endl;
+                std::cout << "t_wl: " << t_wl_.transpose() << std::endl;
             }
             *global_map += *world_cloud_;
             if (frame % m_builder_config.map_save_interval == 0)
@@ -197,7 +197,7 @@ void LIONode::execute()
 
 double LIONode::scan_end_time()
 {
-    return m_package.cloud_end_time;
+    return m_package.cloud_end_time * 1e-9; // Convert nanoseconds to seconds
 }
 
 void LIONode::processPackage()
@@ -210,6 +210,11 @@ bool LIONode::checkMappingStatus() const
     return m_builder->status() != BuilderStatus::MAPPING;
 }
 
+CloudType::Ptr LIONode::getLidarCloud()
+{
+    return m_package.cloud;
+}
+
 CloudType::Ptr LIONode::getBodyCloud()
 {
     return m_builder->lidar_processor()->transformCloud(m_package.cloud, m_kf->x().r_il, m_kf->x().t_il);
@@ -220,11 +225,11 @@ CloudType::Ptr LIONode::getWorldCloud()
     return m_builder->lidar_processor()->transformCloud(m_package.cloud, m_builder->lidar_processor()->r_wl(), m_builder->lidar_processor()->t_wl());
 }
 
-M3D LIONode::getRIL()
+M3D LIONode::getRWL()
 {
     return m_builder->lidar_processor()->r_wl();
 }
-V3D LIONode::getTIL()
+V3D LIONode::getTWL()
 {
     return m_builder->lidar_processor()->t_wl();
 }

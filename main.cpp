@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 20:43:56
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-04 16:09:15
+ * @LastEditTime: 2025-07-05 18:40:46
  */
 #include <iostream>
 #include <string>
@@ -79,12 +79,13 @@ int main(int argc, char **argv)
                 if (lio_node->checkMappingStatus())
                     break;
 
-                CloudType::Ptr body_cloud = lio_node->getBodyCloud();
-                CloudType::Ptr world_cloud = lio_node->getWorldCloud();
+                CloudType::Ptr lidar_cloud = lio_node->getLidarCloud();
+                // CloudType::Ptr body_cloud = lio_node->getBodyCloud();
+                // CloudType::Ptr world_cloud = lio_node->getWorldCloud();
                 // check dyn need pose axis and pc !!!
-                M3D r_il = lio_node->getRIL();
-                V3D t_il = lio_node->getTIL();
-                dyn_node->execute_odom(body_cloud, r_il, t_il, lio_node->scan_end_time());
+                M3D r_wl = lio_node->getRWL();
+                V3D t_wl = lio_node->getTWL();
+                dyn_node->execute_odom(lidar_cloud, r_wl, t_wl, lio_node->scan_end_time());
             }
         }
         break;

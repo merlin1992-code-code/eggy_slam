@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-04 16:08:03
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-04 21:54:09
+ * @LastEditTime: 2025-07-05 18:21:17
  */
 /*
  * @Description: Do not Edit
@@ -111,10 +111,12 @@ void DynNode::execute()
     std::vector<double> odom = time_odom_map_[time];
     cur_rot = Eigen::Quaterniond(odom[6], odom[3], odom[4], odom[5]).toRotationMatrix();
     cur_pos = gps2enu(odom[0], odom[1], odom[2]);
-    cur_time = time / 1e9;
+    cur_time = time * 1e-9;
     std::cout << std::fixed << std::setprecision(6);
-    std::cout << "cur_pos: " << cur_pos.transpose() << std::endl;
-    std::cout << "cur_rot: " << cur_rot << std::endl;
+    std::cout << "cur_pos: " << std::endl;
+    std::cout << cur_pos.transpose() << std::endl;
+    std::cout << "cur_rot: " << std::endl;
+    std::cout << cur_rot << std::endl;
     std::cout << "cur_time: " << cur_time << std::endl;
     DynObjFilt_->filter(cur_pc, cur_rot, cur_pos, cur_time);
     DynObjFilt_->publish_dyn(output_dir_, file_name);
@@ -122,15 +124,17 @@ void DynNode::execute()
   }
 }
 
-void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &rot, V3D &pos, double scan_end_time)
+void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &cur_rot, V3D &cur_pos, double scan_end_time)
 {
-  DynObjFilt_->filter(cloud, rot, pos, scan_end_time);
+  DynObjFilt_->filter(cloud, cur_rot, cur_pos, scan_end_time);
   std::cout << std::fixed << std::setprecision(6);
-  std::cout << "cur_pos: " << pos.transpose() << std::endl;
-  std::cout << "cur_rot: " << rot << std::endl;
+  std::cout << "cur_pos: " << std::endl;
+  std::cout << cur_pos.transpose() << std::endl;
+  std::cout << "cur_rot: " << std::endl;
+  std::cout << cur_rot << std::endl;
   std::cout << "cur_time: " << scan_end_time << std::endl;
-  unsigned long long scan_time_int = static_cast<unsigned long long>(scan_end_time);
+  unsigned long long scan_time_int = static_cast<unsigned long long>(scan_end_time*1e9);
   std::string scan_file_name = std::to_string(scan_time_int) + ".pcd";
-  DynObjFilt_->publish_dyn(output_dir_, scan_file_name);
-  pose_records_.push_back({pos, rot});
+  DynObjFilt_->publish_dyn(output_fusion_dir_, scan_file_name);
+  pose_records_.push_back({cur_pos, cur_rot});
 }
