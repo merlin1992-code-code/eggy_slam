@@ -2143,7 +2143,7 @@ bool DynObjFilter::Case3DepthConsistencyCheck(const point_soph &p,
   }
 }
 
-void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
+void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name, const M3D &rot_end, const V3D &pos_end)
 {
   ensure_out_dir(output_dir);
   std::string world_dir = output_dir + "/dyn_world";
@@ -2156,6 +2156,22 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
   ensure_out_dir(std_cluster_down_dir);
   ensure_out_dir(std_cluster_pub_dir);
   ensure_out_dir(std_cluster_dir);
+
+  // 追加保存当前帧的 pose
+  std::string pose_file = output_dir + "/poses.yaml";
+  std::ofstream fout(pose_file, std::ios::app);
+  if (fout.is_open())
+  {
+    Eigen::Quaterniond q(rot_end);
+    fout << file_name << ":\n";
+    fout << "  pos: [" << pos_end.x() << ", " << pos_end.y() << ", " << pos_end.z() << "]\n";
+    fout << "  rot: [" << q.x() << ", " << q.y() << ", " << q.z() << ", " << q.w() << "]\n";
+    fout.close();
+  }
+  else
+  {
+    std::cerr << "Failed to open pose file: " << pose_file << std::endl;
+  }
 
   if (cluster_coupled) // pubLaserCloudEffect pub_pcl_dyn_extend
                        // pubLaserCloudEffect_depth
@@ -2172,7 +2188,7 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name)
          << " Average total time: " << time_total_avr << endl;
   }
   cout << "case1 num: " << case1_num << " case2 num: " << case2_num
-  
+
        << " case3 num: " << case3_num << endl;
 
   case1_num = 0;

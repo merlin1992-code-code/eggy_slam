@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-04 16:08:03
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-05 18:21:17
+ * @LastEditTime: 2025-07-06 22:12:36
  */
 /*
  * @Description: Do not Edit
@@ -119,12 +119,12 @@ void DynNode::execute()
     std::cout << cur_rot << std::endl;
     std::cout << "cur_time: " << cur_time << std::endl;
     DynObjFilt_->filter(cur_pc, cur_rot, cur_pos, cur_time);
-    DynObjFilt_->publish_dyn(output_dir_, file_name);
+    DynObjFilt_->publish_dyn(output_dir_, file_name, cur_rot, cur_pos);
     pose_records_.push_back({cur_pos, cur_rot});
   }
 }
 
-void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &cur_rot, V3D &cur_pos, double scan_end_time)
+void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D &cur_rot, V3D &cur_pos, double scan_start_time, double scan_end_time)
 {
   DynObjFilt_->filter(cloud, cur_rot, cur_pos, scan_end_time);
   std::cout << std::fixed << std::setprecision(6);
@@ -132,9 +132,15 @@ void DynNode::execute_odom(pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud, M3D
   std::cout << cur_pos.transpose() << std::endl;
   std::cout << "cur_rot: " << std::endl;
   std::cout << cur_rot << std::endl;
-  std::cout << "cur_time: " << scan_end_time << std::endl;
-  unsigned long long scan_time_int = static_cast<unsigned long long>(scan_end_time*1e9);
-  std::string scan_file_name = std::to_string(scan_time_int) + ".pcd";
-  DynObjFilt_->publish_dyn(output_fusion_dir_, scan_file_name);
+  std::cout << "cur_start_time: " << scan_start_time << std::endl;
+  std::cout << "cur_end_time: " << scan_end_time << std::endl;
+  unsigned long long scan_start_time_int = static_cast<unsigned long long>(scan_start_time * 1e9);
+  std::string scan_file_name = std::to_string(scan_start_time_int) + ".pcd";
+  DynObjFilt_->publish_dyn(output_fusion_dir_, scan_file_name, cur_rot, cur_pos);
   pose_records_.push_back({cur_pos, cur_rot});
+}
+
+std::string DynNode::getStdPcdDir()
+{
+  return output_fusion_dir_ + "/std_cluster";
 }

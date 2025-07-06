@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 20:43:56
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-05 18:40:46
+ * @LastEditTime: 2025-07-06 22:41:16
  */
 #include <iostream>
 #include <string>
@@ -43,7 +43,9 @@ int main(int argc, char **argv)
     }
 
     auto lio_node = std::make_shared<LIONode>(lio_config);
+    lio_node->init_buffer();
     auto dyn_node = std::make_shared<DynNode>(dyn_config);
+    auto lio_second_node = std::make_shared<LIONodeSecond>(lio_config, dyn_node->getStdPcdDir(), lio_node->getImuVec());
     // lio excute outside of main thread
     //
     switch (mode)
@@ -64,7 +66,9 @@ int main(int argc, char **argv)
             lio_node->imuCB(imu_msg);
         }
         BOOST_FOREACH (const sensor_msgs::PointCloud2Ptr &lidar_msg, lidar_vec)
+        //for (size_t i = 0; i < 20; ++i)
         {
+            //auto lidar_msg = lidar_vec[i];
             lio_node->lidarCB(lidar_msg);
             while (lio_node->syncPackage())
             {
@@ -80,12 +84,10 @@ int main(int argc, char **argv)
                     break;
 
                 CloudType::Ptr lidar_cloud = lio_node->getLidarCloud();
-                // CloudType::Ptr body_cloud = lio_node->getBodyCloud();
-                // CloudType::Ptr world_cloud = lio_node->getWorldCloud();
-                // check dyn need pose axis and pc !!!
+
                 M3D r_wl = lio_node->getRWL();
                 V3D t_wl = lio_node->getTWL();
-                dyn_node->execute_odom(lidar_cloud, r_wl, t_wl, lio_node->scan_end_time());
+                dyn_node->execute_odom(lidar_cloud, r_wl, t_wl, lio_node->scan_start_time(), lio_node->scan_end_time());
             }
         }
         break;

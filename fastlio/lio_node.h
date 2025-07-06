@@ -3,11 +3,12 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-05 18:40:35
+ * @LastEditTime: 2025-07-06 19:53:55
  */
 #include <chrono>
 #include <filesystem>
 #include <iostream>
+#include <algorithm>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -50,12 +51,14 @@ class LIONode
 {
 public:
     explicit LIONode(const std::string &config_path);
-    void execute();
+    virtual void init_buffer();
+    virtual void execute();
     CloudType::Ptr getLidarCloud();
     CloudType::Ptr getBodyCloud();
     CloudType::Ptr getWorldCloud();
     M3D getRWL();
     V3D getTWL();
+    double scan_start_time();
     double scan_end_time();
     std::vector<sensor_msgs::PointCloud2Ptr> getLidarVec() const { return lidar_vec; }
     std::vector<sensor_msgs::ImuPtr> getImuVec() const { return imu_vec; }
@@ -64,12 +67,10 @@ public:
     bool syncPackage();
     void processPackage();
     bool checkMappingStatus() const;
-
-private:
+    std::vector<sensor_msgs::ImuPtr> get_imu_vec() const;
     void loadParameters(const std::string &config_path = "config.yaml");
-    void init_buffer();
 
-private:
+public:
     YAML::Node config;
     StateData m_state_data;
     SyncPackage m_package;
@@ -85,4 +86,17 @@ private:
     M3D r_wl_;
     V3D t_wl_;
     CloudViewer cloud_viewer;
+};
+
+class LIONodeSecond : public LIONode
+{
+public:
+    LIONodeSecond(const std::string &config_path, const std::string &pcd_dir, const std::vector<sensor_msgs::ImuPtr> &imu_vec_in);
+    void init_buffer() override;
+    void lidarCB(size_t idx);
+    void execute() override;
+
+private:
+    std::string pcd_dir_;
+    std::vector<std::pair<double, CloudType::Ptr>> lidar_vec; // 直接存时间戳和点云
 };

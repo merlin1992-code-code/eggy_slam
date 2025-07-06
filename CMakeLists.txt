@@ -80,3 +80,13 @@ target_link_libraries(ToRosbag
     yaml-cpp::yaml-cpp
     ${PCL_LIBRARIES}
 )
+
+add_executable(stitch
+    stitch/stitch.cpp
+)
+
+target_link_libraries(stitch
+    yaml-cpp::yaml-cpp
+    Eigen3::Eigen
+    ${PCL_LIBRARIES}
+)

@@ -534,7 +534,7 @@ public:
     void init(NodeHandle &nh);
     void init_from_yaml(const std::string &yaml_path);
     void filter(PointCloudXYZI::Ptr feats_undistort, const M3D &rot_end, const V3D &pos_end, const double &scan_end_time);
-    void publish_dyn(std::string output_dir, std::string file_name);
+    void publish_dyn(std::string output_dir, std::string file_name, const M3D &rot_end, const V3D &pos_end);
     void set_path(string file_path, string file_path_origin);
 
     void Points2Buffer(vector<point_soph *> &points, std::vector<int> &index_vector);

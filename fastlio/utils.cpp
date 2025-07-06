@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:44:02
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-06-28 12:15:45
+ * @LastEditTime: 2025-07-06 09:51:42
  */
 #include "utils.h"
 
@@ -12,7 +12,7 @@ pcl::PointCloud<pcl::PointXYZINormal>::Ptr Utils::convertToPCL(const sensor_msgs
     pcl::PointCloud<pcl::PointXYZINormal>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZINormal>);
     int point_num = pc_msg->height * pc_msg->width;
     cloud->reserve(point_num / filter_num + 1);
-
+    // ns 19位 整数 
     double ts_begin = pc_msg->header.stamp.toNSec();
     int64_t ts_begin_ns = static_cast<int64_t>(ts_begin);
 
@@ -45,6 +45,7 @@ pcl::PointCloud<pcl::PointXYZINormal>::Ptr Utils::convertToPCL(const sensor_msgs
         float intensity = sensor_msgs::readPointCloud2BufferValue<float>(
             &pc_msg->data[j * step + i_offset],
             pc_msg->fields[i_idx].datatype);
+        // ts 10位整数 + 9位小数 
         double ts = sensor_msgs::readPointCloud2BufferValue<double>(
             &pc_msg->data[j * step + ts_offset],
             pc_msg->fields[ts_idx].datatype);

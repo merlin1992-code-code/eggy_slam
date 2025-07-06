@@ -52,6 +52,7 @@ struct Config
 
     double lidar_cov_inv = 1000.0;
     int map_save_interval = 20;
+    int map_save_second_interval = 40; // Save second global map every 40 seconds
 };
 
 struct IMUData
