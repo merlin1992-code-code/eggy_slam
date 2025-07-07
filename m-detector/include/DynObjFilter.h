@@ -17,6 +17,8 @@
 #include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include <nlohmann/json.hpp>
+
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/ply_io.h>
 #include <pcl/point_cloud.h>
@@ -41,6 +43,7 @@
 using namespace std;
 using namespace Eigen;
 using namespace cv;
+using json = nlohmann::json;
 
 /*** For dynamic object filtering ***/
 #define PI_MATH (3.141593f)
@@ -534,9 +537,10 @@ public:
     void init(NodeHandle &nh);
     void init_from_yaml(const std::string &yaml_path);
     void filter(PointCloudXYZI::Ptr feats_undistort, const M3D &rot_end, const V3D &pos_end, const double &scan_end_time);
+    void save_pose_yaml(const std::string &pose_file, const std::string &file_name, const M3D &rot_end, const V3D &pos_end);
+    void save_pose_json(const std::string &pose_file, const std::string &file_name, const M3D &rot_end, const V3D &pos_end);
     void publish_dyn(std::string output_dir, std::string file_name, const M3D &rot_end, const V3D &pos_end);
     void set_path(string file_path, string file_path_origin);
-
     void Points2Buffer(vector<point_soph *> &points, std::vector<int> &index_vector);
     void Buffer2DepthMap(double cur_time);
     void SphericalProjection(point_soph &p, int depth_index, const M3D &rot, const V3D &transl, point_soph &p_spherical);

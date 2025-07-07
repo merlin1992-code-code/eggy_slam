@@ -18,6 +18,7 @@ find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(jsoncpp CONFIG REQUIRED)
+find_package(nlohmann_json REQUIRED)
 find_package(TBB REQUIRED)
 
 add_subdirectory(thirdparty)
@@ -63,30 +64,35 @@ target_link_libraries(eggy PUBLIC
     pthread
     PROJ::proj
     yaml-cpp::yaml-cpp
+    nlohmann_json::nlohmann_json
     glm::glm
     imgui
     tsl::robin_map
 )
 
 # tools
-set(TOOLS_SRC
-    tools/toRosbag.cpp
+#bag
+set(BAG_SRC
+    tools/toRosbag/toRosbag.cpp
 )
-
-add_executable(ToRosbag tools/main.cpp ${TOOLS_SRC})
+add_executable(ToRosbag tools/toRosbag/main.cpp ${BAG_SRC})
 target_include_directories(ToRosbag PRIVATE ${PCL_INCLUDE_DIRS})
 target_link_libraries(ToRosbag
     rosbag
     yaml-cpp::yaml-cpp
+    nlohmann_json::nlohmann_json
     ${PCL_LIBRARIES}
 )
-
-add_executable(stitch
-    stitch/stitch.cpp
+#stitch
+set(STITCH_SRC
+    tools/stitch/stitch.cpp
 )
-
+add_executable(stitch
+    ${STITCH_SRC}
+)
 target_link_libraries(stitch
     yaml-cpp::yaml-cpp
+    nlohmann_json::nlohmann_json
     Eigen3::Eigen
     ${PCL_LIBRARIES}
 )

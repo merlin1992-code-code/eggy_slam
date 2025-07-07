@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 20:43:56
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-06 22:41:16
+ * @LastEditTime: 2025-07-07 10:19:57
  */
 #include <iostream>
 #include <string>
@@ -15,7 +15,6 @@ using namespace std;
 enum RunMode
 {
     MODE_LIO,
-    MODE_DYN,
     MODE_FUSION
 };
 
@@ -33,8 +32,6 @@ int main(int argc, char **argv)
             mode = MODE_FUSION;
         else if (std::string(argv[i]) == "--mode_lio")
             mode = MODE_LIO;
-        else if (std::string(argv[i]) == "--mode_dyn")
-            mode = MODE_DYN;
     }
     if (lio_config.empty() || dyn_config.empty())
     {
@@ -87,7 +84,7 @@ int main(int argc, char **argv)
 
                 M3D r_wl = lio_node->getRWL();
                 V3D t_wl = lio_node->getTWL();
-                dyn_node->execute_odom(lidar_cloud, r_wl, t_wl, lio_node->scan_start_time(), lio_node->scan_end_time());
+                dyn_node->execute(lidar_cloud, r_wl, t_wl, lio_node->scan_end_time());
             }
         }
         break;
@@ -96,12 +93,6 @@ int main(int argc, char **argv)
     {
         std::cout << "Running in LIO mode." << std::endl;
         lio_node->execute();
-        break;
-    }
-    case MODE_DYN:
-    {
-        std::cout << "Running in Dyn mode." << std::endl;
-        dyn_node->execute();
         break;
     }
     default:

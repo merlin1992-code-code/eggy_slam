@@ -2143,6 +2143,57 @@ bool DynObjFilter::Case3DepthConsistencyCheck(const point_soph &p,
   }
 }
 
+void DynObjFilter::save_pose_yaml(const std::string &pose_file, const std::string &file_name, const M3D &rot_end, const V3D &pos_end)
+{
+  std::ofstream fout(pose_file, std::ios::app);
+  if (fout.is_open())
+  {
+    Eigen::Quaterniond q(rot_end);
+    fout << file_name << ":\n";
+    fout << "  pos: [" << pos_end.x() << ", " << pos_end.y() << ", " << pos_end.z() << "]\n";
+    fout << "  rot: [" << q.x() << ", " << q.y() << ", " << q.z() << ", " << q.w() << "]\n";
+    fout.close();
+  }
+  else
+  {
+    std::cerr << "Failed to open pose file: " << pose_file << std::endl;
+  }
+}
+
+void DynObjFilter::save_pose_json(const std::string &pose_file, const std::string &file_name, const M3D &rot_end, const V3D &pos_end)
+{
+  json poses;
+  std::ifstream fin(pose_file);
+  if (fin.is_open())
+  {
+    try
+    {
+      fin >> poses;
+    }
+    catch (const std::exception &e)
+    {
+      std::cerr << "JSON parse error: " << e.what() << std::endl;
+      poses = json::object();
+    }
+    fin.close();
+  }
+  // 如果文件不存在，不报错，直接新建 poses = {}
+  Eigen::Quaterniond q(rot_end);
+  poses[file_name] = {
+      {"pose", {{"rotation", {{"x", q.x()}, {"y", q.y()}, {"z", q.z()}, {"w", q.w()}}}, {"translation", {{"x", pos_end.x()}, {"y", pos_end.y()}, {"z", pos_end.z()}}}}}};
+
+  std::ofstream fout(pose_file);
+  if (fout.is_open())
+  {
+    fout << poses.dump(4);
+    fout.close();
+  }
+  else
+  {
+    std::cerr << "Failed to open pose file: " << pose_file << std::endl;
+  }
+}
+
 void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name, const M3D &rot_end, const V3D &pos_end)
 {
   ensure_out_dir(output_dir);
@@ -2158,20 +2209,22 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name, co
   ensure_out_dir(std_cluster_dir);
 
   // 追加保存当前帧的 pose
-  std::string pose_file = output_dir + "/poses.yaml";
-  std::ofstream fout(pose_file, std::ios::app);
-  if (fout.is_open())
-  {
-    Eigen::Quaterniond q(rot_end);
-    fout << file_name << ":\n";
-    fout << "  pos: [" << pos_end.x() << ", " << pos_end.y() << ", " << pos_end.z() << "]\n";
-    fout << "  rot: [" << q.x() << ", " << q.y() << ", " << q.z() << ", " << q.w() << "]\n";
-    fout.close();
-  }
-  else
-  {
-    std::cerr << "Failed to open pose file: " << pose_file << std::endl;
-  }
+  save_pose_json(output_dir + "/poses.json", file_name, rot_end, pos_end);
+  save_pose_yaml(output_dir + "/poses.yaml", file_name, rot_end, pos_end);
+  // std::string pose_file = output_dir + "/poses.yaml";
+  // std::ofstream fout(pose_file, std::ios::app);
+  // if (fout.is_open())
+  // {
+  //   Eigen::Quaterniond q(rot_end);
+  //   fout << file_name << ":\n";
+  //   fout << "  pos: [" << pos_end.x() << ", " << pos_end.y() << ", " << pos_end.z() << "]\n";
+  //   fout << "  rot: [" << q.x() << ", " << q.y() << ", " << q.z() << ", " << q.w() << "]\n";
+  //   fout.close();
+  // }
+  // else
+  // {
+  //   std::cerr << "Failed to open pose file: " << pose_file << std::endl;
+  // }
 
   if (cluster_coupled) // pubLaserCloudEffect pub_pcl_dyn_extend
                        // pubLaserCloudEffect_depth
