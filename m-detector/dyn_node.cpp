@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-04 16:08:03
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-07 10:19:23
+ * @LastEditTime: 2025-07-07 17:26:39
  */
 /*
  * @Description: Do not Edit
@@ -32,9 +32,7 @@ DynNode::DynNode(const std::string &config_path)
   node_ = load_yaml(config_path);
   m_cfg_ = node_["M_detector_cfg"].as<std::string>();
   root_dir_ = node_["root_dir"].as<std::string>();
-  output_dir_ = node_["output_dir"].as<std::string>();
   output_fusion_dir_ = node_["output_fusion_dir"].as<std::string>();
-  ensure_out_dir(output_dir_);
   ensure_out_dir(output_fusion_dir_);
   nh_ = std::make_shared<NodeHandle>(m_cfg_);
   DynObjFilt_ = std::make_shared<DynObjFilter>();

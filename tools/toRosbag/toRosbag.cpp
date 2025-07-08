@@ -3,12 +3,13 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-23 10:43:07
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 15:29:14
+ * @LastEditTime: 2025-07-07 22:18:13
  */
 
 #include "toRosbag.h"
 
 namespace fs = std::filesystem;
+const double MIN_VALID_TIMESTAMP = 1e8;
 
 // rs128::Point 特化
 template <>
@@ -93,6 +94,11 @@ void writePcdToBag(const std::string &pcd_folder, rosbag::Bag &bag,
       std::cerr << "Failed to load " << file << std::endl;
       continue;
     }
+    if (cloud.points.empty())
+    {
+      std::cerr << "点云为空，跳过: " << file << std::endl;
+      continue;
+    }
 
     // 对点按 timestamp 升序排序
     std::sort(cloud.points.begin(), cloud.points.end(),
@@ -103,17 +109,23 @@ void writePcdToBag(const std::string &pcd_folder, rosbag::Bag &bag,
 
     // 获取第一个有效点的 timestamp
     double start_time = 0;
+    bool found_valid = false;
+    
     for (const auto &pt : cloud.points)
     {
-      if (!std::isnan(pt.x) && !std::isnan(pt.y) && !std::isnan(pt.z))
+      std::cout << "pt: ts=" << pt.timestamp << std::endl;
+      if (!std::isnan(pt.x) && !std::isnan(pt.y) && !std::isnan(pt.z) && pt.timestamp > MIN_VALID_TIMESTAMP)
       {
+        std::cout << "DEBUG: will write " << file << std::endl;
         start_time = pt.timestamp;
+        std::cout << "IIINNN start_time =" << start_time << std::endl;
+        found_valid = true;
         break;
       }
     }
-    if (start_time == 0)
+    if (!found_valid || start_time <= 0 || std::isnan(start_time))
     {
-      std::cerr << "本帧无有效点，跳过: " << file << std::endl;
+      std::cerr << "本帧无有效点或时间戳无效，跳过: " << file << std::endl;
       continue;
     }
 
@@ -127,8 +139,11 @@ void writePcdToBag(const std::string &pcd_folder, rosbag::Bag &bag,
     msg.header.stamp.sec = static_cast<uint32_t>(ns / 1000000000ULL);
     msg.header.stamp.nsec = static_cast<uint32_t>(ns % 1000000000ULL);
     pointCloudToMsg(cloud, msg);
+    std::cout << "PointCloud2 msg: " << msg.header.stamp.sec << "."
+              << std::setfill('0') << std::setw(9) << msg.header.stamp.nsec
+              << " for file " << file << std::endl;
     bag.write(point_topic, msg.header.stamp, msg);
-    // std::cout << "Wrote: " << file << std::endl;
+    std::cout << "Wrote: " << file << std::endl;
   }
   std::cout << "Finished writing PCD files to bag." << std::endl;
   std::cout << "Total PCD files written: " << pcd_files.size() << std::endl;
@@ -174,3 +189,132 @@ void writeImuToBag(const std::string &imu_txt, rosbag::Bag &bag,
 }
 
 template void writePcdToBag<rs128::Point>(const std::string &, rosbag::Bag &, const std::string &);
+
+// 获取排序后的所有pcd文件
+std::vector<std::string> get_sorted_pcd_files(const std::string &pcd_folder)
+{
+  std::vector<std::string> pcd_files;
+  for (const auto &entry : fs::directory_iterator(pcd_folder))
+  {
+    if (entry.path().extension() == ".pcd")
+      pcd_files.push_back(entry.path().string());
+  }
+  std::sort(pcd_files.begin(), pcd_files.end());
+  return pcd_files;
+}
+
+// 读取IMU所有行
+std::vector<std::string> get_imu_lines(const std::string &imu_txt)
+{
+  std::vector<std::string> lines;
+  std::ifstream fin(imu_txt);
+  std::string line;
+  while (std::getline(fin, line))
+  {
+    if (!line.empty() && line[0] != '#')
+      lines.push_back(line);
+  }
+  return lines;
+}
+
+template <typename PointT>
+void writeBatchBags(const std::string &pcd_folder, const std::string &imu_txt,
+                    const std::string &bag_prefix,
+                    const std::string &point_topic, const std::string &imu_topic,
+                    size_t batch_size)
+{
+  auto pcd_files = get_sorted_pcd_files(pcd_folder);
+  auto imu_lines = get_imu_lines(imu_txt);
+
+  size_t total_pcd = pcd_files.size();
+  size_t total_imu = imu_lines.size();
+  size_t imu_per_batch = batch_size * 10;
+
+  size_t imu_idx = 0;
+  size_t batch_id = 0;
+  for (size_t batch_start = 0; batch_start < total_pcd; batch_start += batch_size, ++batch_id)
+  {
+    size_t batch_end = std::min(batch_start + batch_size, total_pcd);
+    std::string batch_bag_path = bag_prefix + "_batch_" + std::to_string(batch_id) + ".bag";
+    std::cout << "Writing bag: " << batch_bag_path << " [" << batch_start << ", " << batch_end << ")" << std::endl;
+
+    rosbag::Bag bag;
+    bag.open(batch_bag_path, rosbag::bagmode::Write);
+
+    // 写入点云
+    for (size_t i = batch_start; i < batch_end; ++i)
+    {
+      const auto &file = pcd_files[i];
+      pcl::PointCloud<PointT> cloud;
+      if (pcl::io::loadPCDFile<PointT>(file, cloud) == -1)
+      {
+        std::cerr << "Failed to load " << file << std::endl;
+        continue;
+      }
+      std::sort(cloud.points.begin(), cloud.points.end(),
+                [](const PointT &a, const PointT &b)
+                { return a.timestamp < b.timestamp; });
+
+      double start_time = 0;
+      bool found_valid = false;
+      for (const auto &pt : cloud.points)
+      {
+        if (!std::isnan(pt.x) && !std::isnan(pt.y) && !std::isnan(pt.z) && pt.timestamp > 0)
+        {
+          start_time = pt.timestamp;
+          found_valid = true;
+          break;
+        }
+      }
+      if (!found_valid)
+      {
+        std::cerr << "本帧无有效点或时间戳无效，跳过: " << file << std::endl;
+        continue;
+      }
+      if (start_time <= 0)
+      {
+        std::cerr << "本帧无有效点，跳过: " << file << std::endl;
+        continue;
+      }
+
+      uint64_t ns = static_cast<uint64_t>(start_time * 1e9);
+      sensor_msgs::PointCloud2 msg;
+      msg.header.stamp.sec = static_cast<uint32_t>(ns / 1000000000ULL);
+      msg.header.stamp.nsec = static_cast<uint32_t>(ns % 1000000000ULL);
+      pointCloudToMsg(cloud, msg);
+      bag.write(point_topic, msg.header.stamp, msg);
+    }
+
+    // 写入IMU
+    size_t imu_batch_end = std::min(imu_idx + imu_per_batch, total_imu);
+    for (; imu_idx < imu_batch_end; ++imu_idx)
+    {
+      std::istringstream iss(imu_lines[imu_idx]);
+      uint64_t ns;
+      double ax, ay, az, gx, gy, gz, qx, qy, qz, qw;
+      iss >> ns >> ax >> ay >> az >> gx >> gy >> gz >> qx >> qy >> qz >> qw;
+      sensor_msgs::Imu imu_msg;
+      imu_msg.header.stamp.sec = static_cast<uint32_t>(ns / 1000000000ULL);
+      imu_msg.header.stamp.nsec = static_cast<uint32_t>(ns % 1000000000ULL);
+      imu_msg.header.frame_id = "imu_link";
+      imu_msg.linear_acceleration.x = ax;
+      imu_msg.linear_acceleration.y = ay;
+      imu_msg.linear_acceleration.z = az;
+      imu_msg.angular_velocity.x = gx;
+      imu_msg.angular_velocity.y = gy;
+      imu_msg.angular_velocity.z = gz;
+      imu_msg.orientation.x = qx;
+      imu_msg.orientation.y = qy;
+      imu_msg.orientation.z = qz;
+      imu_msg.orientation.w = qw;
+      bag.write(imu_topic, imu_msg.header.stamp, imu_msg);
+    }
+
+    bag.close();
+    std::cout << "Batch bag written: " << batch_bag_path << std::endl;
+  }
+  std::cout << "All batch bags finished. Total pcd: " << total_pcd << ", total imu: " << imu_idx << std::endl;
+}
+
+// 模板实例化
+template void writeBatchBags<rs128::Point>(const std::string &, const std::string &, const std::string &, const std::string &, const std::string &, size_t);

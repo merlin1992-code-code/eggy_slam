@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-01 09:49:20
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-01 09:53:06
+ * @LastEditTime: 2025-07-07 21:13:59
  */
 #ifndef TO_ROSBAG_H
 #define TO_ROSBAG_H
@@ -54,5 +54,15 @@ void writePcdToBag(const std::string &pcd_folder, rosbag::Bag &bag,
 
 void writeImuToBag(const std::string &imu_txt, rosbag::Bag &bag,
                    const std::string &imu_topic);
+
+
+std::vector<std::string> get_sorted_pcd_files(const std::string& pcd_folder);
+std::vector<std::string> get_imu_lines(const std::string& imu_txt);
+
+template <typename PointT>
+void writeBatchBags(const std::string &pcd_folder, const std::string &imu_txt,
+                    const std::string &bag_prefix,
+                    const std::string &point_topic, const std::string &imu_topic,
+                    size_t batch_size);
 
 #endif // TO_ROSBAG_H

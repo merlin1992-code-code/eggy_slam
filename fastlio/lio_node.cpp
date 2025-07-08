@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-06 22:40:40
+ * @LastEditTime: 2025-07-08 13:00:56
  */
 
 #include <tbb/parallel_for.h>
@@ -84,7 +84,7 @@ void LIONode::imuCB(const sensor_msgs::ImuConstPtr msg)
         std::cerr << "IMU Message is out of order" << std::endl;
         std::deque<IMUData>().swap(m_state_data.imu_buffer);
     }
-    m_state_data.imu_buffer.emplace_back(V3D(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z) * 10.0,
+    m_state_data.imu_buffer.emplace_back(V3D(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z) * 9.81,
                                          V3D(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z),
                                          timestamp);
     m_state_data.last_imu_time = timestamp;
@@ -172,6 +172,10 @@ void LIONode::execute()
             t_wl_ = m_builder->lidar_processor()->t_wl();
             if (1)
             {
+                std::cout << "r_il: " << m_kf->x().r_il.transpose() << std::endl;
+                std::cout << "t_il: " << m_kf->x().t_il.transpose() << std::endl;
+                std::cout << "r_wi: " << m_kf->x().r_wi.transpose() << std::endl;
+                std::cout << "t_wi: " << m_kf->x().t_wi.transpose() << std::endl;
                 std::cout << "r_wl: " << r_wl_.transpose() << std::endl;
                 std::cout << "t_wl: " << t_wl_.transpose() << std::endl;
             }
@@ -184,6 +188,19 @@ void LIONode::execute()
             frame++;
         }
     }
+}
+
+void LIONode::debug_pose()
+{
+    std::cout << "Current Pose:" << std::endl;
+    std::cout << "r_il: " << m_kf->x().r_il.transpose() << std::endl;
+    std::cout << "t_il: " << m_kf->x().t_il.transpose() << std::endl;
+    std::cout << "r_wi: " << m_kf->x().r_wi.transpose() << std::endl;
+    std::cout << "t_wi: " << m_kf->x().t_wi.transpose() << std::endl;
+    r_wl_ = m_builder->lidar_processor()->r_wl();
+    t_wl_ = m_builder->lidar_processor()->t_wl();
+    std::cout << "r_wl: " << r_wl_.transpose() << std::endl;
+    std::cout << "t_wl: " << t_wl_.transpose() << std::endl;
 }
 
 double LIONode::scan_start_time()
@@ -271,7 +288,7 @@ void LIONodeSecond::init_buffer()
 
     if (lidar_vec.empty() || imu_vec.empty())
     {
-        std::cout<<lidar_vec.size() << " " << imu_vec.size() << std::endl;
+        std::cout << lidar_vec.size() << " " << imu_vec.size() << std::endl;
         std::cerr << "Lidar or IMU data is empty, please check the pcd directory or imu_vec." << std::endl;
         exit(1);
     }
@@ -310,7 +327,7 @@ void LIONodeSecond::execute()
     }
     int frame = 0;
     for (size_t i = 0; i < lidar_vec.size(); ++i)
-    //for (size_t i = 0; i < m_builder_config.map_save_second_interval; ++i)
+    // for (size_t i = 0; i < m_builder_config.map_save_second_interval; ++i)
     {
         std::cout << "Processing frame: " << frame << std::endl;
         lidarCB(i);

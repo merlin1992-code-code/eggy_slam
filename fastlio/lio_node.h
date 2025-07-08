@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:43:15
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-06 19:53:55
+ * @LastEditTime: 2025-07-08 12:56:12
  */
 #include <chrono>
 #include <filesystem>
@@ -60,6 +60,7 @@ public:
     V3D getTWL();
     double scan_start_time();
     double scan_end_time();
+    void debug_pose();
     std::vector<sensor_msgs::PointCloud2Ptr> getLidarVec() const { return lidar_vec; }
     std::vector<sensor_msgs::ImuPtr> getImuVec() const { return imu_vec; }
     void imuCB(const sensor_msgs::ImuConstPtr msg);

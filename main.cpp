@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-28 20:43:56
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-07 10:19:57
+ * @LastEditTime: 2025-07-08 12:56:28
  */
 #include <iostream>
 #include <string>
@@ -84,6 +84,7 @@ int main(int argc, char **argv)
 
                 M3D r_wl = lio_node->getRWL();
                 V3D t_wl = lio_node->getTWL();
+                lio_node->debug_pose();
                 dyn_node->execute(lidar_cloud, r_wl, t_wl, lio_node->scan_end_time());
             }
         }

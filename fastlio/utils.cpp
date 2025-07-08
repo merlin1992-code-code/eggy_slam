@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-06-24 09:44:02
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-06 09:51:42
+ * @LastEditTime: 2025-07-08 11:27:52
  */
 #include "utils.h"
 
@@ -83,9 +83,9 @@ pcl::PointCloud<pcl::PointXYZINormal>::Ptr Utils::convertToPCL(const sensor_msgs
         }
         cloud->push_back(p);
     }
-    std::cout << "Converted PointCloud2 to PCL cloud with " << cloud->size() << " points, "
-              << num_invalid_pt << " invalid points filtered. "
-              << num_out_of_range_pt << " out of range points filtered. " << std::endl;
+    // std::cout << "Converted PointCloud2 to PCL cloud with " << cloud->size() << " points, "
+    //           << num_invalid_pt << " invalid points filtered. "
+    //           << num_out_of_range_pt << " out of range points filtered. " << std::endl;
 
     return cloud;
 }
