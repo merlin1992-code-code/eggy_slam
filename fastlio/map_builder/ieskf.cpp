@@ -35,10 +35,10 @@ V21D State::operator-(const State &other) const
     Eigen::Matrix3d dR_il = orthogonalize(other.r_il.transpose() * r_il);
 
     V21D delta = V21D::Zero();
-    //delta.segment<3>(0) = Sophus::SO3d(other.r_wi.transpose() * r_wi).log();
+    // delta.segment<3>(0) = Sophus::SO3d(other.r_wi.transpose() * r_wi).log();
     delta.segment<3>(0) = Sophus::SO3d(dR_wi).log();
     delta.segment<3>(3) = t_wi - other.t_wi;
-    //delta.segment<3>(6) = Sophus::SO3d(other.r_il.transpose() * r_il).log();
+    // delta.segment<3>(6) = Sophus::SO3d(other.r_il.transpose() * r_il).log();
     delta.segment<3>(6) = Sophus::SO3d(dR_il).log();
     delta.segment<3>(9) = t_il - other.t_il;
     delta.segment<3>(12) = v - other.v;
@@ -66,10 +66,25 @@ std::ostream &operator<<(std::ostream &os, const State &state)
 void IESKF::predict(const Input &inp, double dt, const M12D &Q)
 {
     V21D delta = V21D::Zero();
-    delta.segment<3>(0) = (inp.gyro - m_x.bg) * dt;
-    delta.segment<3>(3) = m_x.v * dt;
-    delta.segment<3>(12) = (m_x.r_wi * (inp.acc - m_x.ba) + m_x.g) * dt;
 
+    // 旋转预测
+    delta.segment<3>(0) = (inp.gyro - m_x.bg) * dt;
+
+    // 位置预测
+    delta.segment<3>(3) = m_x.v * dt;
+
+    // 速度预测 - 这里是关键部分
+    // 关键点
+    //------------------------------------------------------------------
+    // delta.segment<3>(12) = (m_x.r_wi * (inp.acc - m_x.ba) + m_x.g) * dt;
+    //------------------------------------------------------------------
+    V3D acc_corrected = inp.acc - m_x.ba;
+    V3D acc_world = m_x.r_wi * acc_corrected;
+    V3D net_acc = acc_world + m_x.g;
+
+    delta.segment<3>(12) = net_acc * dt;
+
+    // 状态转移矩阵F
     m_F.setIdentity();
     m_F.block<3, 3>(0, 0) = Sophus::SO3d::exp(-(inp.gyro - m_x.bg) * dt).matrix();
     m_F.block<3, 3>(0, 15) = -Jr((inp.gyro - m_x.bg) * dt) * dt;
@@ -77,13 +92,17 @@ void IESKF::predict(const Input &inp, double dt, const M12D &Q)
     m_F.block<3, 3>(12, 0) = -m_x.r_wi * Sophus::SO3d::hat(inp.acc - m_x.ba) * dt;
     m_F.block<3, 3>(12, 18) = -m_x.r_wi * dt;
 
+    // 噪声矩阵G
     m_G.setZero();
     m_G.block<3, 3>(0, 0) = -Jr((inp.gyro - m_x.bg) * dt) * dt;
     m_G.block<3, 3>(12, 3) = -m_x.r_wi * dt;
     m_G.block<3, 3>(15, 6) = Eigen::Matrix3d::Identity() * dt;
     m_G.block<3, 3>(18, 9) = Eigen::Matrix3d::Identity() * dt;
 
+    // 状态更新
     m_x += delta;
+
+    // 协方差更新
     m_P = m_F * m_P * m_F.transpose() + m_G * Q * m_G.transpose();
 }
 

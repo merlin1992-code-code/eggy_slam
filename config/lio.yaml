@@ -1,4 +1,4 @@
-rosbag: /Users/linhao/eggy_slam/data/voyahGT.bag
+rosbag: /Users/linhao/Desktop/clips2/raw_1/clip.bag
 imu_topic: /RS/imu
 lidar_topic: /RS/lidar
 body_frame: body
@@ -15,12 +15,18 @@ cube_len: 300
 det_range: 360
 move_thresh: 1.5
 
-na: 0.01
-ng: 0.01
-nba: 0.0001
-nbg: 0.0001
+# na: 0.01
+# ng: 0.01
+# nba: 0.0001
+# nbg: 0.0001
 
-imu_init_num: 100
+na: 0.0005
+ng: 0.0001
+nba: 0.00002
+nbg: 0.00001
+
+
+imu_init_num: 20
 near_search_num: 5
 ieskf_max_iter: 5
 

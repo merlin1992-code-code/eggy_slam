@@ -36,7 +36,9 @@ bool IMUProcessor::initialize(SyncPackage &package)
         m_kf->x().initGravityDir(V3D(0, 0, -1.0));
     }
     else
-        m_kf->x().initGravityDir(acc_mean);
+        //m_kf->x().initGravityDir(acc_mean);
+        m_kf->x().initGravityDir(acc_mean.normalized() * 9.81); 
+        std::cout << "Gravity not aligned, gravity set to: " << m_kf->x().g.transpose() << std::endl;
     m_kf->P().setIdentity();
     m_kf->P().block<3, 3>(6, 6) = M3D::Identity() * 0.00001;
     m_kf->P().block<3, 3>(9, 9) = M3D::Identity() * 0.00001;
