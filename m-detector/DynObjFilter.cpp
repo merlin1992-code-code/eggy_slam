@@ -373,10 +373,16 @@ void DynObjFilter::filter(PointCloudXYZI::Ptr feats_undistort,
   cluster::std_msgs::Header header_clus;
   header_clus.stamp = cluster::ros::Time::fromSec(scan_end_time).toMicro();
   header_clus.frame_id = frame_id;
+
+  if (!groundCloud)
+  {
+    groundCloud.reset(new pcl::PointCloud<PointType>());
+  }
+  groundCloud->clear();
   if (cluster_coupled || cluster_future)
   {
     Cluster.Clusterprocess(dyn_tag_cluster, *laserCloudDynObj, raw_points_world,
-                           header_clus, rot_end, pos_end);
+                           header_clus, rot_end, pos_end, *groundCloud);
     for (int i = 0; i < size; i++)
     {
       PointType po;
@@ -2202,11 +2208,14 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name, co
   std::string std_cluster_down_dir = output_dir + "/std_cluster_down";
   std::string std_cluster_pub_dir = output_dir + "/std_cluster_pub";
   std::string std_cluster_dir = output_dir + "/std_cluster";
+  std::string ground_dir = output_dir + "/ground";
+
   ensure_out_dir(world_dir);
   ensure_out_dir(cluster_dir);
   ensure_out_dir(std_cluster_down_dir);
   ensure_out_dir(std_cluster_pub_dir);
   ensure_out_dir(std_cluster_dir);
+  ensure_out_dir(ground_dir);
 
   // 追加保存当前帧的 pose
   save_pose_json(output_dir + "/poses.json", file_name, rot_end, pos_end);
@@ -2225,6 +2234,13 @@ void DynObjFilter::publish_dyn(std::string output_dir, std::string file_name, co
   // {
   //   std::cerr << "Failed to open pose file: " << pose_file << std::endl;
   // }
+
+  // 保存地面点云
+  if (groundCloud && !groundCloud->empty())
+  {
+
+    pcl::io::savePCDFileBinary(ground_dir + "/" + file_name, *groundCloud);
+  }
 
   if (cluster_coupled) // pubLaserCloudEffect pub_pcl_dyn_extend
                        // pubLaserCloudEffect_depth

@@ -31,7 +31,8 @@ namespace cluster
                                      const pcl::PointCloud<PointType> &raw_point,
                                      const std_msgs::Header &header_in,
                                      const Eigen::Matrix3d odom_rot_in,
-                                     const Eigen::Vector3d odom_pos_in)
+                                     const Eigen::Vector3d odom_pos_in,
+                                     pcl::PointCloud<PointType> &true_ground_out)
   {
     cluster_begin = ros::Time::now();
     header = header_in;
@@ -52,6 +53,11 @@ namespace cluster
     time_total_average =
         time_total_average * (time_ind - 1) / time_ind + time_total / time_ind;
     cur_frame += 1;
+    true_ground_out.clear();
+    for (const auto &cloud : bbox_high.true_ground)
+    {
+      true_ground_out += cloud;
+    }
   }
 
   void DynObjCluster::ClusterAndTrack(

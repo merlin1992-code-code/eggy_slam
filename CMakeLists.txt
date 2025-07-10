@@ -12,15 +12,26 @@ if(NOT CXX_MARCH)
     set(CXX_MARCH native)
 endif()
 
+find_package(Eigen3 REQUIRED)
+set(EIGEN3_INCLUDE_DIR "/opt/homebrew/include/eigen3")
+set(EIGEN3_INCLUDE_DIRS "/opt/homebrew/include/eigen3")
+set(Eigen3_VERSION "3.4.0")
+message(STATUS "Eigen3_DIR: ${Eigen3_DIR}")
+message(STATUS "EIGEN3_INCLUDE_DIR: ${EIGEN3_INCLUDE_DIR}")
+message(STATUS "EIGEN3_INCLUDE_DIRS: ${EIGEN3_INCLUDE_DIRS}")
+message(STATUS "Eigen3_VERSION: ${Eigen3_VERSION}")
+
+find_package(Ceres REQUIRED)
 find_package(PCL REQUIRED)
 find_package(PROJ REQUIRED)
-find_package(Eigen3 REQUIRED)
 find_package(Boost REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(jsoncpp CONFIG REQUIRED)
 find_package(nlohmann_json REQUIRED)
 find_package(TBB REQUIRED)
 find_package(GTSAM REQUIRED)
+
+
 
 add_subdirectory(thirdparty)
 add_definitions("-D SOPHUS_USE_BASIC_LOGGING")
@@ -32,6 +43,8 @@ include_directories(thirdparty/Sophus
     ${PROJECT_SOURCE_DIR}/m-detector/include
     ${PROJECT_SOURCE_DIR}/m-detector/include/cluster_predict
     ${PROJECT_SOURCE_DIR}/hba/src/hba
+    ${PROJECT_SOURCE_DIR}/ground_constrain/include
+    ${PROJECT_SOURCE_DIR}/ground_constrain/include/dipgseg
     )
 
 # fastlio
@@ -86,6 +99,23 @@ target_link_libraries(BA
     Eigen3::Eigen
     yaml-cpp::yaml-cpp
     nlohmann_json::nlohmann_json
+)
+#ground constrain
+set(
+    GROUND_CONSTRAIN_SRC
+    ground_constrain/backend_optimization.cpp
+    ground_constrain/ceresfunc_ground.cpp
+)
+
+add_executable(GC ground_constrain/gc_node.cpp ${GROUND_CONSTRAIN_SRC})
+target_link_libraries(GC
+    ${PCL_LIBRARIES}
+    ${OpenCV_LIBS}
+    gtsam
+    Eigen3::Eigen
+    yaml-cpp::yaml-cpp
+    nlohmann_json::nlohmann_json
+    Ceres::ceres
 )
 
 # tools

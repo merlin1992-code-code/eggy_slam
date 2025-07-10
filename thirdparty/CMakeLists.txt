@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 
 add_subdirectory(ros EXCLUDE_FROM_ALL)
 add_subdirectory(yaml-cpp)
-add_subdirectory(eigen)
+# add_subdirectory(eigen)
 
 # imgui lib
 find_package(glfw3 REQUIRED)

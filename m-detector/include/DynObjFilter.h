@@ -458,6 +458,10 @@ public:
     int laserCloudSteadObj_accu_limit = 5;
     float voxel_filter_size = 0.1;
 
+    //
+    pcl::PointCloud<PointType>::Ptr groundCloud;
+    //
+
     cluster::DynObjCluster Cluster;
     bool cluster_coupled = false, cluster_future = false;
     std::vector<int> dyn_tag_cluster;

@@ -218,7 +218,8 @@ namespace cluster
                         const pcl::PointCloud<PointType> &raw_point,
                         const std_msgs::Header &header_in,
                         const Eigen::Matrix3d odom_rot_in,
-                        const Eigen::Vector3d odom_pos_in);
+                        const Eigen::Vector3d odom_pos_in,
+                        pcl::PointCloud<PointType> &true_ground_out);
     void ClusterAndTrack(std::vector<int> &dyn_tag,
                          pcl::PointCloud<PointType>::Ptr &points_in,
                          std_msgs::Header header_in, bbox_t &bbox, double delta,
