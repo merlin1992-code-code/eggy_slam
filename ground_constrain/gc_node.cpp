@@ -3,11 +3,12 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-10 10:36:36
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-10 21:37:00
+ * @LastEditTime: 2025-07-13 22:32:06
  */
 #include <iostream>
 #include <vector>
 #include <string>
+#include <dirent.h>
 #include <filesystem>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -20,18 +21,21 @@
 #include "ground_plane_utils.h"
 #include "backend_optimization.h"
 #include "make_keyframes.h"
-#include <dirent.h>
+#include "projection_param.h"
 #include "dipgseg.h"
+
 
 int main(int argc, char **argv)
 {
-    if (argc < 3)
+    if (argc < 4)
     {
-        std::cerr << "Usage: " << argv[0] << " <pcd_dir> <pose.json>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <pcd_dir> <pose.json> <config.yaml>" << std::endl;
         return -1;
     }
     std::string pcd_dir = argv[1];
     std::string pose_json_path = argv[2];
+    std::string config_path = argv[3];
+
 
     // 1. 读取 pose.json
     std::ifstream fin(pose_json_path);
@@ -40,9 +44,17 @@ int main(int argc, char **argv)
         std::cerr << "Failed to open pose json: " << pose_json_path << std::endl;
         return -1;
     }
-    std::string ground_pcd_dir = "/Users/linhao/Desktop/ground_pcds";
+
+    LidarParam param;
+    bool success = load_lidar_param(config_path, param);
+    if (!success)
+    {
+        std::cerr << "Failed to load lidar parameters from: " << config_path << std::endl;
+        return -1;
+    }
+    std::string ground_pcd_dir = param.ground_pcd_dir;
     std::filesystem::create_directory(ground_pcd_dir);
-    auto dipgseg = std::make_shared<DIPGSEG::Dipgseg>();
+    auto dipgseg = std::make_shared<DIPGSEG::Dipgseg>(param);
     nlohmann::json poses_json;
     fin >> poses_json;
 
@@ -89,17 +101,27 @@ int main(int argc, char **argv)
             ne.compute(cloud_in);
         }
 
-        KeyFrame kf;
-        *kf.filtered_cloud = cloud_in;
-        kf.pose = T;
+   
         pcl::PointCloud<pcl::PointXYZINormal> ground_cloud, cloud_non_ground;
         std::string ground_pcd_path = ground_pcd_dir + "/" + pcd_file;
         dipgseg->segment_ground(cloud_in, ground_cloud, cloud_non_ground);
-        pcl::io::savePCDFileBinary(ground_pcd_path, ground_cloud);
-        // extractGroundPoints(cloud_in, ground_cloud);
+        //pcl::io::savePCDFileBinary(ground_pcd_path, ground_cloud);
+        KeyFrame kf;
+        *kf.filtered_cloud = ground_cloud;
+        kf.pose = T;
         Eigen::Vector4f plane_coeff = get_plane_coeffs(ground_cloud);
         kf.ground_plane_coeff = plane_coeff;
         keyframes.push_back(kf);
+#if 0
+        pcl::PointCloud<pcl::PointXYZINormal> ground_cloud_ransac;
+        ground_filtered(ground_cloud, plane_coeff, ground_cloud_ransac, 0.08f);
+        if (ground_cloud_ransac.size() < 10)
+        {
+            std::cerr << "Ground cloud too small after filtering: " << ground_cloud_ransac.size() << std::endl;
+            continue;
+        }
+        pcl::io::savePCDFileBinary(ground_pcd_path, ground_cloud_ransac);
+#endif 
     }
 
     if (keyframes.size() < 2)
