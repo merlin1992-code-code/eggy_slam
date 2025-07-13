@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-06 22:35:42
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-07 14:42:02
+ * @LastEditTime: 2025-07-13 22:58:01
  */
 #include <iostream>
 #include <fstream>
@@ -12,12 +12,96 @@
 #include <yaml-cpp/yaml.h>
 #include <nlohmann/json.hpp>
 #include <pcl/io/pcd_io.h>
+#include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/common/transforms.h>
 #include <Eigen/Geometry>
 
+#include <opencv2/opencv.hpp>
+#include <limits>
+
 using CloudType = pcl::PointCloud<pcl::PointXYZINormal>;
 using json = nlohmann::json;
+
+void project_and_save(const CloudType::Ptr &cloud, float res, const std::string &prefix)
+{
+    float min_x = std::numeric_limits<float>::max(), max_x = std::numeric_limits<float>::lowest();
+    float min_y = min_x, max_y = max_x, min_z = min_x, max_z = max_x;
+    for (const auto &pt : cloud->points)
+    {
+        min_x = std::min(min_x, pt.x);
+        max_x = std::max(max_x, pt.x);
+        min_y = std::min(min_y, pt.y);
+        max_y = std::max(max_y, pt.y);
+        min_z = std::min(min_z, pt.z);
+        max_z = std::max(max_z, pt.z);
+    }
+    int w_xy = static_cast<int>((max_x - min_x) / res) + 1;
+    int h_xy = static_cast<int>((max_y - min_y) / res) + 1;
+    int w_xz = w_xy, h_xz = static_cast<int>((max_z - min_z) / res) + 1;
+    int w_yz = static_cast<int>((max_y - min_y) / res) + 1, h_yz = h_xz;
+
+    cv::Mat sum_xy = cv::Mat::zeros(h_xy, w_xy, CV_32FC1), cnt_xy = cv::Mat::zeros(h_xy, w_xy, CV_32FC1);
+    cv::Mat sum_xz = cv::Mat::zeros(h_xz, w_xz, CV_32FC1), cnt_xz = cv::Mat::zeros(h_xz, w_xz, CV_32FC1);
+    cv::Mat sum_yz = cv::Mat::zeros(h_yz, w_yz, CV_32FC1), cnt_yz = cv::Mat::zeros(h_yz, w_yz, CV_32FC1);
+
+    for (const auto &pt : cloud->points)
+    {
+        int ix = static_cast<int>((pt.x - min_x) / res);
+        int iy = static_cast<int>((pt.y - min_y) / res);
+        int iz = static_cast<int>((pt.z - min_z) / res);
+        // xy
+        if (ix >= 0 && ix < w_xy && iy >= 0 && iy < h_xy)
+        {
+            sum_xy.at<float>(h_xy - 1 - iy, ix) += pt.intensity;
+            cnt_xy.at<float>(h_xy - 1 - iy, ix) += 1.0f;
+        }
+        // xz
+        if (ix >= 0 && ix < w_xz && iz >= 0 && iz < h_xz)
+        {
+            sum_xz.at<float>(h_xz - 1 - iz, ix) += pt.intensity;
+            cnt_xz.at<float>(h_xz - 1 - iz, ix) += 1.0f;
+        }
+        // yz
+        if (iy >= 0 && iy < w_yz && iz >= 0 && iz < h_yz)
+        {
+            sum_yz.at<float>(h_yz - 1 - iz, iy) += pt.intensity;
+            cnt_yz.at<float>(h_yz - 1 - iz, iy) += 1.0f;
+        }
+    }
+
+    auto make_color = [](const cv::Mat &sum, const cv::Mat &cnt)
+    {
+        cv::Mat avg, norm, color;
+        cv::divide(sum, cnt, avg, 1, CV_32FC1);
+        double minVal, maxVal;
+        cv::minMaxLoc(avg, &minVal, &maxVal, nullptr, nullptr, cnt > 0);
+        // 归一化到0~255
+        avg.setTo(0, cnt == 0);
+        avg.convertTo(norm, CV_8UC1, 255.0 / (maxVal - minVal + 1e-6), -minVal * 255.0 / (maxVal - minVal + 1e-6));
+        cv::applyColorMap(norm, color, cv::COLORMAP_TURBO);
+        color.setTo(cv::Scalar(0, 0, 0), cnt == 0); // 无点处设为黑色
+        return color;
+    };
+
+    auto make_color_heatmap = [](const cv::Mat &sum, const cv::Mat &cnt)
+    {
+        cv::Mat norm, color;
+        // 不做平均，直接用 sum
+        double minVal, maxVal;
+        cv::minMaxLoc(sum, &minVal, &maxVal, nullptr, nullptr, cnt > 0);
+        cv::Mat sum_masked = sum.clone();
+        sum_masked.setTo(0, cnt == 0);
+        sum_masked.convertTo(norm, CV_8UC1, 255.0 / (maxVal - minVal + 1e-6), -minVal * 255.0 / (maxVal - minVal + 1e-6));
+        cv::applyColorMap(norm, color, cv::COLORMAP_TURBO);
+        color.setTo(cv::Scalar(0, 0, 0), cnt == 0); // 无点处设为黑色
+        return color;
+    };
+
+    cv::imwrite(prefix + "_xy_turbo_h.png", make_color_heatmap(sum_xy, cnt_xy));
+    cv::imwrite(prefix + "_xz_turbo_h.png", make_color_heatmap(sum_xz, cnt_xz));
+    cv::imwrite(prefix + "_yz_turbo_h.png", make_color_heatmap(sum_yz, cnt_yz));
+}
 
 bool ends_with(const std::string &str, const std::string &suffix)
 {
@@ -126,5 +210,6 @@ int main(int argc, char **argv)
 
     pcl::io::savePCDFileBinary(output_pcd, *global_map);
     std::cout << "Saved global map: " << output_pcd << std::endl;
+    project_and_save(global_map, 0.01f, "global_map");
     return 0;
 }

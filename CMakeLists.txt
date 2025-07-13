@@ -143,4 +143,5 @@ target_link_libraries(stitch
     nlohmann_json::nlohmann_json
     Eigen3::Eigen
     ${PCL_LIBRARIES}
+    ${OpenCV_LIBS}
 )

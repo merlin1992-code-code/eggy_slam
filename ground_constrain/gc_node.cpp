@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-10 10:36:36
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-13 22:32:06
+ * @LastEditTime: 2025-07-13 22:37:38
  */
 #include <iostream>
 #include <vector>
@@ -24,6 +24,7 @@
 #include "projection_param.h"
 #include "dipgseg.h"
 
+#define SAVE_GROUND_PCD 0
 
 int main(int argc, char **argv)
 {
@@ -100,8 +101,6 @@ int main(int argc, char **argv)
             ne.setKSearch(10);
             ne.compute(cloud_in);
         }
-
-   
         pcl::PointCloud<pcl::PointXYZINormal> ground_cloud, cloud_non_ground;
         std::string ground_pcd_path = ground_pcd_dir + "/" + pcd_file;
         dipgseg->segment_ground(cloud_in, ground_cloud, cloud_non_ground);
@@ -112,7 +111,7 @@ int main(int argc, char **argv)
         Eigen::Vector4f plane_coeff = get_plane_coeffs(ground_cloud);
         kf.ground_plane_coeff = plane_coeff;
         keyframes.push_back(kf);
-#if 0
+#if SAVE_GROUND_PCD
         pcl::PointCloud<pcl::PointXYZINormal> ground_cloud_ransac;
         ground_filtered(ground_cloud, plane_coeff, ground_cloud_ransac, 0.08f);
         if (ground_cloud_ransac.size() < 10)
