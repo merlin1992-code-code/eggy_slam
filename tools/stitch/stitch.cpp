@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-06 22:35:42
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-13 22:58:01
+ * @LastEditTime: 2025-07-14 18:48:38
  */
 #include <iostream>
 #include <fstream>
@@ -84,23 +84,64 @@ void project_and_save(const CloudType::Ptr &cloud, float res, const std::string 
         return color;
     };
 
-    auto make_color_heatmap = [](const cv::Mat &sum, const cv::Mat &cnt)
+    auto make_color_log = [](const cv::Mat &sum, const cv::Mat &cnt)
     {
-        cv::Mat norm, color;
-        // 不做平均，直接用 sum
-        double minVal, maxVal;
-        cv::minMaxLoc(sum, &minVal, &maxVal, nullptr, nullptr, cnt > 0);
-        cv::Mat sum_masked = sum.clone();
-        sum_masked.setTo(0, cnt == 0);
-        sum_masked.convertTo(norm, CV_8UC1, 255.0 / (maxVal - minVal + 1e-6), -minVal * 255.0 / (maxVal - minVal + 1e-6));
+        cv::Mat avg, log_img, norm, color;
+        cv::divide(sum, cnt, avg, 1, CV_32FC1);
+        avg.setTo(0, cnt == 0);
+
+        // 对数拉伸
+        cv::log(avg + 1, log_img);
+
+        // 计算分位数
+        std::vector<float> vals;
+        for (int r = 0; r < log_img.rows; ++r)
+            for (int c = 0; c < log_img.cols; ++c)
+                if (cnt.at<float>(r, c) > 0)
+                    vals.push_back(log_img.at<float>(r, c));
+        std::sort(vals.begin(), vals.end());
+        float minVal = vals[vals.size() * 0.01];
+        float maxVal = vals[vals.size() * 0.99];
+
+        log_img.convertTo(norm, CV_8UC1, 255.0 / (maxVal - minVal + 1e-6), -minVal * 255.0 / (maxVal - minVal + 1e-6));
         cv::applyColorMap(norm, color, cv::COLORMAP_TURBO);
-        color.setTo(cv::Scalar(0, 0, 0), cnt == 0); // 无点处设为黑色
+        color.setTo(cv::Scalar(0, 0, 0), cnt == 0);
+        return color;
+    };
+    auto make_color_enhanced = [](const cv::Mat &sum, const cv::Mat &cnt)
+    {
+        cv::Mat avg, log_img, norm, color;
+        cv::divide(sum, cnt, avg, 1, CV_32FC1);
+        avg.setTo(0, cnt == 0);
+
+        // 对数拉伸
+        cv::log(avg + 1, log_img);
+
+        // 计算分位数
+        std::vector<float> vals;
+        for (int r = 0; r < log_img.rows; ++r)
+            for (int c = 0; c < log_img.cols; ++c)
+                if (cnt.at<float>(r, c) > 0)
+                    vals.push_back(log_img.at<float>(r, c));
+        if (vals.empty())
+            return cv::Mat();
+        std::sort(vals.begin(), vals.end());
+        float minVal = vals[vals.size() * 0.02];
+        float maxVal = vals[vals.size() * 0.98];
+
+        log_img.convertTo(norm, CV_8UC1, 255.0 / (maxVal - minVal + 1e-6), -minVal * 255.0 / (maxVal - minVal + 1e-6));
+        // CLAHE增强
+        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(8.0, cv::Size(8, 8));
+        cv::Mat clahe_norm;
+        clahe->apply(norm, clahe_norm);
+        cv::applyColorMap(clahe_norm, color, cv::COLORMAP_TURBO);
+        color.setTo(cv::Scalar(0, 0, 0), cnt == 0);
         return color;
     };
 
-    cv::imwrite(prefix + "_xy_turbo_h.png", make_color_heatmap(sum_xy, cnt_xy));
-    cv::imwrite(prefix + "_xz_turbo_h.png", make_color_heatmap(sum_xz, cnt_xz));
-    cv::imwrite(prefix + "_yz_turbo_h.png", make_color_heatmap(sum_yz, cnt_yz));
+    cv::imwrite(prefix + "_xy_turbo.png", make_color_enhanced(sum_xy, cnt_xy));
+    cv::imwrite(prefix + "_xz_turbo.png", make_color_enhanced(sum_xz, cnt_xz));
+    cv::imwrite(prefix + "_yz_turbo.png", make_color_enhanced(sum_yz, cnt_yz));
 }
 
 bool ends_with(const std::string &str, const std::string &suffix)
