@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-10 10:36:36
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-13 22:37:38
+ * @LastEditTime: 2025-07-14 20:44:37
  */
 #include <iostream>
 #include <vector>
@@ -104,16 +104,15 @@ int main(int argc, char **argv)
         pcl::PointCloud<pcl::PointXYZINormal> ground_cloud, cloud_non_ground;
         std::string ground_pcd_path = ground_pcd_dir + "/" + pcd_file;
         dipgseg->segment_ground(cloud_in, ground_cloud, cloud_non_ground);
-        //pcl::io::savePCDFileBinary(ground_pcd_path, ground_cloud);
-        KeyFrame kf;
-        *kf.filtered_cloud = ground_cloud;
-        kf.pose = T;
         Eigen::Vector4f plane_coeff = get_plane_coeffs(ground_cloud);
+        pcl::PointCloud<pcl::PointXYZINormal> ground_cloud_ransac;
+        ground_filtered(ground_cloud, plane_coeff, ground_cloud_ransac, 0.08f);
+        KeyFrame kf;
+        *kf.filtered_cloud = ground_cloud_ransac;
+        kf.pose = T;
         kf.ground_plane_coeff = plane_coeff;
         keyframes.push_back(kf);
 #if SAVE_GROUND_PCD
-        pcl::PointCloud<pcl::PointXYZINormal> ground_cloud_ransac;
-        ground_filtered(ground_cloud, plane_coeff, ground_cloud_ransac, 0.08f);
         if (ground_cloud_ransac.size() < 10)
         {
             std::cerr << "Ground cloud too small after filtering: " << ground_cloud_ransac.size() << std::endl;
@@ -122,16 +121,13 @@ int main(int argc, char **argv)
         pcl::io::savePCDFileBinary(ground_pcd_path, ground_cloud_ransac);
 #endif 
     }
-
     if (keyframes.size() < 2)
     {
         std::cerr << "Not enough valid keyframes!" << std::endl;
         return -1;
     }
-
     // 后端地面约束优化
     optimizeWithGroundConstraint(keyframes);
-
     //输出优化后轨迹
     for (size_t i = 0; i < keyframes.size(); ++i)
     {

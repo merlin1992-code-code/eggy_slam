@@ -3,7 +3,7 @@
  * @Author: hao.lin (voyah perception)
  * @Date: 2025-07-06 22:35:42
  * @LastEditors: Do not Edit
- * @LastEditTime: 2025-07-14 18:48:38
+ * @LastEditTime: 2025-07-17 09:25:35
  */
 #include <iostream>
 #include <fstream>
@@ -70,7 +70,7 @@ void project_and_save(const CloudType::Ptr &cloud, float res, const std::string 
         }
     }
 
-    auto make_color = [](const cv::Mat &sum, const cv::Mat &cnt)
+    auto make_color_turbo = [](const cv::Mat &sum, const cv::Mat &cnt)
     {
         cv::Mat avg, norm, color;
         cv::divide(sum, cnt, avg, 1, CV_32FC1);
@@ -84,7 +84,7 @@ void project_and_save(const CloudType::Ptr &cloud, float res, const std::string 
         return color;
     };
 
-    auto make_color_log = [](const cv::Mat &sum, const cv::Mat &cnt)
+    auto make_color_turbo_log = [](const cv::Mat &sum, const cv::Mat &cnt)
     {
         cv::Mat avg, log_img, norm, color;
         cv::divide(sum, cnt, avg, 1, CV_32FC1);
@@ -108,40 +108,43 @@ void project_and_save(const CloudType::Ptr &cloud, float res, const std::string 
         color.setTo(cv::Scalar(0, 0, 0), cnt == 0);
         return color;
     };
-    auto make_color_enhanced = [](const cv::Mat &sum, const cv::Mat &cnt)
+
+    auto make_color_binary = [](const cv::Mat &sum, const cv::Mat &cnt)
     {
-        cv::Mat avg, log_img, norm, color;
+        cv::Mat avg, norm, binary;
         cv::divide(sum, cnt, avg, 1, CV_32FC1);
         avg.setTo(0, cnt == 0);
 
-        // 对数拉伸
-        cv::log(avg + 1, log_img);
-
-        // 计算分位数
+        // 计算有效像素的中位数作为阈值
         std::vector<float> vals;
-        for (int r = 0; r < log_img.rows; ++r)
-            for (int c = 0; c < log_img.cols; ++c)
+        for (int r = 0; r < avg.rows; ++r)
+            for (int c = 0; c < avg.cols; ++c)
                 if (cnt.at<float>(r, c) > 0)
-                    vals.push_back(log_img.at<float>(r, c));
+                    vals.push_back(avg.at<float>(r, c));
         if (vals.empty())
             return cv::Mat();
-        std::sort(vals.begin(), vals.end());
-        float minVal = vals[vals.size() * 0.02];
-        float maxVal = vals[vals.size() * 0.98];
+        std::nth_element(vals.begin(), vals.begin() + vals.size() / 2, vals.end());
+        float thresh = vals[vals.size() / 2];
 
-        log_img.convertTo(norm, CV_8UC1, 255.0 / (maxVal - minVal + 1e-6), -minVal * 255.0 / (maxVal - minVal + 1e-6));
-        // CLAHE增强
-        cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(8.0, cv::Size(8, 8));
-        cv::Mat clahe_norm;
-        clahe->apply(norm, clahe_norm);
-        cv::applyColorMap(clahe_norm, color, cv::COLORMAP_TURBO);
-        color.setTo(cv::Scalar(0, 0, 0), cnt == 0);
-        return color;
+        // 归一化到0~255
+        double minVal, maxVal;
+        cv::minMaxLoc(avg, &minVal, &maxVal, nullptr, nullptr, cnt > 0);
+        avg.convertTo(norm, CV_8UC1, 255.0 / (maxVal - minVal + 1e-6), -minVal * 255.0 / (maxVal - minVal + 1e-6));
+
+        // 二值化
+        cv::threshold(norm, binary, 255.0 * (thresh - minVal) / (maxVal - minVal + 1e-6), 255, cv::THRESH_BINARY);
+        binary.setTo(0, cnt == 0);                        // 无点处设为黑色
+        cv::cvtColor(binary, binary, cv::COLOR_GRAY2BGR); // 转为3通道
+        return binary;
     };
 
-    cv::imwrite(prefix + "_xy_turbo.png", make_color_enhanced(sum_xy, cnt_xy));
-    cv::imwrite(prefix + "_xz_turbo.png", make_color_enhanced(sum_xz, cnt_xz));
-    cv::imwrite(prefix + "_yz_turbo.png", make_color_enhanced(sum_yz, cnt_yz));
+    cv::imwrite(prefix + "_xy_turbo.png", make_color_turbo_log(sum_xy, cnt_xy));
+    cv::imwrite(prefix + "_xz_turbo.png", make_color_turbo_log(sum_xz, cnt_xz));
+    cv::imwrite(prefix + "_yz_turbo.png", make_color_turbo_log(sum_yz, cnt_yz));
+
+    cv::imwrite(prefix + "_xy_binary.png", make_color_binary(sum_xy, cnt_xy));
+    cv::imwrite(prefix + "_xz_binary.png", make_color_binary(sum_xz, cnt_xz));
+    cv::imwrite(prefix + "_yz_binary.png", make_color_binary(sum_yz, cnt_yz));
 }
 
 bool ends_with(const std::string &str, const std::string &suffix)
